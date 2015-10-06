@@ -59,3 +59,22 @@ heroku_validate_findHerokuConfigurationParentFolderPath()
 	
 	printf '%s' "$currentFolderPath"
 }
+
+heroku_validate_parseBuildDir()
+{
+	local buildDir="$1"
+	
+	core_validate_folderPathReadableAndSearchableAndWritable $core_commandLine_exitCode_USAGE 'option' 'BUILD_DIR' "$buildDir"	
+	pushd "$buildDir"
+		heroku_buildpack_buildDir="$(pwd)"
+	popd
+}
+
+heroku_validate_buildDirCommandLineParse()
+{
+	if [ $# -ne 1 ]; then
+		core_commandLine_exitBadCommandLine "Please specify only one argument, BUILD_DIR, not $# arguments"
+	fi
+	
+	heroku_validate_parseBuildDir "$1"
+}

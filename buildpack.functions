@@ -1,0 +1,137 @@
+# This file is part of heroku. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT. No part of heroku, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
+
+
+heroku_buildpack_actionMessageAndNotes()
+{
+	local actionMessage="$1"
+	shift 1
+	printf '%s %s' '----->\n' "$actionMessage"
+	
+	if [ $# -ne 0 ]; then
+		notesMessage "$@"
+	fi
+}
+
+heroku_buildpack_notesMessages()
+{
+	local noteMessage
+	for noteMessage in "$@"
+	do
+		printf '       %s\n' "$noteMessage"
+	done
+}
+
+heroku_buildpack_endMessages()
+{
+	printf '\n'
+}
+
+core_dependency_requires '*' mkdir
+heroku_buildpack_createCacheDirIfNotPresent()
+{
+	heroku_buildpack_actionMessageAndNotes "Creating cache directory '$heroku_buildpack_cacheDir' if not present"
+		mkdir -m 0755 -p "$heroku_buildpack_cacheDir"
+	heroku_buildpack_endMessages
+}
+
+# Sadly, this approach will 'lost' any trailing line feeds
+heroku_buildpack_getEnvironmentVariableValue()
+{
+	local environmentVariableName="$1"
+	heroku_buildpack_notesMessages "Getting environment variable '$environmentVariableName'"
+	printf '%s' "$(<"$heroku_buildpack_envDir"/"$environmentVariableName")"
+}
+
+heroku_buildpack_sourceKnownCompileEnvironmentVariables()
+{
+	heroku_buildpack_actionMessageAndNotes "Getting environment variables"
+	
+		heroku_environmentVariable_STACK="$(heroku_buildpack_getEnvironmentVariableValue STACK)"
+		heroku_environmentVariable_SOURCE_VERSION="$(heroku_buildpack_getEnvironmentVariableValue SOURCE_VERSION)"
+	
+	heroku_buildpack_endMessages
+
+	heroku_buildpack_actionMessageAndNotes "Validating environment variables" \
+		"Validating environment variable 'STACK'"
+		local hasWarning="$(configure_validate_stack "$heroku_environmentVariable_STACK" 2>&1)"
+		if [ -n "$hasWarning" ]; then
+			core_exitError $core_commandLine_exitCode_CONFIG "Environment variable 'STACK' has unsupported value '$heroku_environmentVariable_STACK'"
+		fi
+	heroku_buildpack_endMessages
+}
+
+core_dependency_requires '*' cp
+heroku_buildpack_deployHerokuBuildpackArtifacts()
+{
+	cp -R "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/"$heroku_buildpacksConfigurationFolderName"/ "$heroku_buildpack_buildDir"/
+}
+
+# core_dependency_requires '*' cat
+heroku_buildpack_releaseYaml()
+{
+	printf '%s' '--- {}'
+	return 0
+	
+	# cat <<-EOF
+	# 	---
+	# 	addons: []
+	# 	default_process_types: {}
+	# EOF
+}
+
+heroku_buildpack_compileMisc()
+{
+	What we want to achieve:-
+	
+	- create an arbitary file system in a folder '/root'
+		- have a template system we install
+	- Use JuNest / ArchLinux or some other package manager (linuxbrew)
+	- Allow install of arbitrary binaries https://github.com/Docverter/docverter/blob/master/.vendor_urls  /   https://github.com/peterkeen/heroku-buildpack-vendorbinaries (this is how pandoc is installed)
+	- modify the PATH (use .profile.d scripts) https://devcenter.heroku.com/articles/profiled
+		mkdir -m 0755 -p "$heroku_buildpack_buildDir"/.profile.d
+		cp a script, eg
+		export PATH=BLAH:"$PATH"
+	- restrict the environment (use .profile.d scripts)
+	
+	# Original solution used heredocuments, which were then sourced; this does not work when /tmp is readonly,
+	# even if TMPDIR is set elsewhere, as debian / ubuntu bash uses a hardcoded /tmp
+	# http://stackoverflow.com/questions/1609423/using-sed-to-expand-environment-variables-inside-files
+	template_createSedScriptOfEnvironmentVariableSubstitutions()
+	{
+		env | sed 's/[\%]/\\&/g;s/\([^=]*\)=\(.*\)/s%${\1}%\2%g/'
+	}
+
+	template_templateFile()
+	{
+		set +e
+		cat "$1" | sed -f <(template_createSedScriptOfEnvironmentVariableSubstitutions)
+		set -e
+	}
+
+	mkdir -m 0755 -p "$CACHE_DIR"
+
+	rm -rf "$CACHE_DIR"/root/etc
+	rsync -a -v --exclude=.gitignore "$BUILD_DIR"/heroku/root/ "$CACHE_DIR"/root/
+	cp /etc/apt/trusted.gpg "$CACHE_DIR"/root/etc/apt
+	rsync -a -v /etc/apt/trusted.gpg.d/ "$CACHE_DIR"/etc/apt/trusted.gpg.d/
+
+	# Consider embedding this as a snippet / heredoc
+	(
+		export CACHE_DIR
+		template_templateFile "$BUILD_DIR"/heroku/apt.conf.template >"$CACHE_DIR"/root/etc/apt/apt.conf
+	)
+
+	cp /etc/apt/sources.list "$CACHE_DIR"/root/etc/apt/sources.list
+	rsync -a -v /etc/apt/preferences.d/ "$CACHE_DIR"/root/etc/apt/preferences.d/
+
+	rsync -a -v /var/lib/dpkg/ "$CACHE_DIR"/root/var/lib/dpkg/
+
+	# https://unix.stackexchange.com/questions/42567/how-to-install-program-locally-without-sudo-privileges
+	# https://serverfault.com/questions/23734/is-there-any-way-to-get-apt-to-install-packages-to-my-home-directory
+	APT_CONFIG="$CACHE_DIR"/root/etc/apt/apt.conf apt-get update
+
+	# Need to run dpkg with --root="$CACHE_DIR"/root
+
+	exit 0
+}

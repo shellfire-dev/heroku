@@ -5,6 +5,12 @@
 heroku_configurationFolderName='.heroku.rc.d'
 core_dependency_declares heroku_configurationFolderName
 
+heroku_buildpacksConfigurationFolderName='buildpacks'
+core_dependency_declares heroku_buildpacksConfigurationFolderName
+
+heroku_frameworkName='heroku-skeleton'
+core_dependency_declares heroku_frameworkName
+
 core_usesIn git
 heroku_createAppIfNecessaryThenDeploy()
 {
