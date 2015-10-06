@@ -33,11 +33,11 @@ heroku_inRepository()
 	fi
 	
 	if [ -s "$_heroku_standardOutputFilePath" ]; then
-		core_message "$warningLevel" "heroku: $(<"$_heroku_standardOutputFilePath")"
+		core_message "$warningLevel" "heroku: stdout: $(<"$_heroku_standardOutputFilePath")"
 	fi
 	
 	if [ -s "$_heroku_errorOutputFilePath" ]; then
-		core_message "$warningLevel" "heroku: $(<"$_heroku_errorOutputFilePath")"
+		core_message "$warningLevel" "heroku: stderr: $(<"$_heroku_errorOutputFilePath")"
 	fi
 	
 	if [ $exitCode -ne 0 ]; then
@@ -181,7 +181,7 @@ heroku_setEnvironmentVariables()
 }
 
 core_usesIn git
-heroku_deploy()
+heroku_push()
 {
 	git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master
 }
