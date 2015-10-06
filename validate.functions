@@ -22,7 +22,7 @@ heroku_validate_repositoryPathAndSetVariable()
 		core_validate_exit "The $category '$name' specifies a repository path '$value' which has not got a readable '.git' folder in its parent paths"
 	fi
 
-	local notEmptyIfLocalModifications="$(git_localModificationHashOrEmptyString "$heroku_repositoryPath")"
+	local notEmptyIfLocalModifications="$(git_localModificationHashOrEmptyString "$repositoryPath")"
 	if [ -n "$notEmptyIfLocalModifications" ]; then
 		core_validate_exit "The $category '$name' specifies a repository path '$value' which has pending local modifications to the git repository at '$repositoryPath'"
 	fi
