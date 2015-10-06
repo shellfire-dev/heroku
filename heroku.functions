@@ -19,7 +19,7 @@ heroku_inRepository()
 	pushd "$heroku_repositoryPath"
 		
 		set +e
-		heroku "$@" 1>"$_heroku_outputFilePath"
+		heroku "$@" 1>"$_heroku_standardOutputFilePath" 2>"$_heroku_errorOutputFilePath"
 		local exitCode=$?
 		set -e
 		
@@ -32,7 +32,13 @@ heroku_inRepository()
 		local warningLevel=INFO
 	fi
 	
-	core_message "$warningLevel" "$(<"$_heroku_outputFilePath")"
+	if [ -s "$_heroku_standardOutputFilePath" ]; then
+		core_message "$warningLevel" "heroku: $(<"$_heroku_standardOutputFilePath")"
+	fi
+	
+	if [ -s "$_heroku_errorOutputFilePath" ]; then
+		core_message "$warningLevel" "heroku: $(<"$_heroku_errorOutputFilePath")"
+	fi
 	
 	if [ $exitCode -ne 0 ]; then
 		core_exitError $core_commandLine_exitCode_SOFTWARE "heroku '$@' failed with exit code '$exitCode'"
@@ -42,9 +48,12 @@ heroku_inRepository()
 heroku_initialise()
 {
 	local TMP_FILE
-	core_temporaryFiles_newFileToRemoveOnExit
 	
-	_heroku_outputFilePath="$TMP_FILE"
+	core_temporaryFiles_newFileToRemoveOnExit
+	_heroku_standardOutputFilePath="$TMP_FILE"
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	_heroku_errorOutputFilePath="$TMP_FILE"
 }
 
 core_dependency_requires '*' git cut
