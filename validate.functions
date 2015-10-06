@@ -45,7 +45,7 @@ heroku_validate_findHerokuConfigurationParentFolderPath()
 		local currentFolderPath="$(pwd)"
 	popd
 		
-	while [ ! core_path_isReadableAndSearchableFolderPath "$currentFolderPath"/"$heroku_configurationFolderName" ]; then
+	while [ ! core_path_isReadableAndSearchableFolderPath "$currentFolderPath"/"$heroku_configurationFolderName" ]
 	do
 		if [ "$currentFolderPath" = '/' ]; then
 			printf ''
