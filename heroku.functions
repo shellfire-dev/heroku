@@ -157,7 +157,7 @@ core_dependency_requires '*' tail
 heroku_setBuildpackIfNecessary()
 {
 	local existingBuildpack="$(heroku_inRepositoryPreserveStandardOut buildpacks | tail -n 1)"
-	if [ "$existingBuildPack" != "$heroku_buildpackUrl" ]; then
+	if [ "$existingBuildpack" != "$heroku_buildpackUrl" ]; then
 		heroku_inRepository buildpacks:set "$heroku_buildpackUrl"
 	fi
 }
