@@ -183,5 +183,5 @@ heroku_setEnvironmentVariables()
 core_usesIn git
 heroku_push()
 {
-	git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master
+	git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master || core_exitError $core_commandLine_exitCode_PROTOCOL "Deployment failure"
 }
