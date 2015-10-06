@@ -2,16 +2,30 @@
 # Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
 
 
-heroku_setConstants()
+heroku_configurationFolderName='.heroku.rc.d'
+core_dependency_declares heroku_configurationFolderName
+
+core_usesIn git
+heroku_createAppIfNecessaryThenDeploy()
 {
-	heroku_stack='cedar-14'
-	heroku_remote='heroku'
+	if ! git_hasRemote "$heroku_repositoryPath" "$heroku_remote"; then
+		heroku_createApp
+	fi
+	heroku_deploy
 }
 
 core_dependency_requires '*' heroku
-heroku_create_app()
+heroku_createApp()
 {
-	heroku create "$heroku_app" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack https://github.com/kr/heroku-buildpack-inline.git#d094b444d6530dcc38dccf5d7844d6990380a08b
+	if ! core_path_isReadableAndSearchableAndWritableFolderPath "$heroku_repositoryPath"/.git; then
+		core_exitError $core_commandLine_exitCode_CANTCREAT "The .git folder in '$heroku_repositoryPath' is not writable; it needs to be when creating an app"
+	fi
+	
+	pushd "$heroku_repositoryPath"
+	
+		heroku create "$heroku_appName" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack https://github.com/kr/heroku-buildpack-inline.git#d094b444d6530dcc38dccf5d7844d6990380a08b
+		
+	popd
 	
 	# We live in /app
 	# The PATH defaults to /usr/local/bin:/usr/bin:/bin
@@ -45,8 +59,8 @@ heroku_create_app()
 	# heroku run bash
 }
 
-core_dependency_requires '*' git
+core_usesIn git
 heroku_deploy()
 {
-	git push "$heroku_remote" master
+	git_push "$heroku_repositoryPath" "$heroku_remote" master
 }

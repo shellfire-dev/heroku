@@ -1,0 +1,43 @@
+# This file is part of heroku. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT. No part of heroku, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
+
+
+core_snippet_embed raw validate_region
+configure_validate_region()
+{
+	configure_isValueValid validate_region "$1"
+}
+
+core_snippet_embed raw validate_stack
+configure_validate_stack()
+{
+	configure_isValueValid validate_stack "$1"
+}
+
+heroku_configure_register()
+{
+	local potentialAppName="$(core_compatibility_basename "$heroku_repositoryPath")"
+	if [ -z "$potentialAppName" ]; then
+		configure_register Value NotEmpty heroku appName
+	else
+		configure_register Value NotEmpty heroku appName "$potentialAppName"
+	fi
+	
+	configure_register Value region heroku region 'eu'
+	configure_register Value NotEmpty heroku remote 'heroku'
+	configure_register Value stack heroku stack 'cedar-14'
+	configure_register Value NotEmpty heroku refspec 'master'
+}
+
+heroku_configure_load()
+{
+	configure_reset heroku
+	configure_source "$heroku_configurationFolderPath" heroku
+	configure_validate heroku
+	
+	heroku_appName="$(configure_getValue heroku appName)"
+	heroku_region="$(configure_getValue heroku region)"
+	heroku_remote="$(configure_getValue heroku remote)"
+	heroku_stack="$(configure_getValue heroku stack)"
+	heroku_refspec="$(configure_getValue heroku refspec)"
+}

@@ -25,7 +25,7 @@ You may need to change the url `https://github.com/shellfire-dev/heroku.git` abo
 
 You will also need to add paths - include the module [paths.d].
 
-You will also need to import the [curl] module and its dependencies.
+You will also need to import the [curl], [git] and [configure] modules and their dependencies.
 
 
 ## Namespace `heroku`
@@ -82,4 +82,5 @@ This is an internal API.
 [core]: https://github.com/shellfire-dev/core "shellfire core module homepage"
 [paths.d]: https://github.com/shellfire-dev/paths.d "paths.d shellfire module homepage"
 [curl]: https://github.com/shellfire-dev/curl "curl shellfire module homepage"
-[version]: https://github.com/shellfire-dev/version "version shellfire module homepage"
+[git]: https://github.com/shellfire-dev/git "git shellfire module homepage"
+[configure]: https://github.com/shellfire-dev/configure "configure shellfire module homepage"
