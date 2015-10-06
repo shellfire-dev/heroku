@@ -79,8 +79,13 @@ heroku_createApp()
 core_usesIn git
 heroku_createAppIfNecessary()
 {
-	if ! git_hasRemote "$heroku_repositoryPath" "$heroku_remote"; then
-		heroku_createApp
+	if git_hasRemote "$heroku_repositoryPath" "$heroku_remote"; then
+		
+		# TODO: We only want to do these steps if things have changed...
+		heroku_inRepository buildpacks:set "$heroku_buildpackUrl"
+		heroku_inRepository apps:rename "$heroku_appName"
+	else
+		heroku_createApp	
 	fi
 }
 
@@ -142,5 +147,5 @@ heroku_setEnvironmentVariables()
 core_usesIn git
 heroku_deploy()
 {
-	git_push "$heroku_repositoryPath" "$heroku_remote" master
+	git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master
 }
