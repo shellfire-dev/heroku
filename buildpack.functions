@@ -2,7 +2,7 @@
 # Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
 
 
-heroku_buildpack_actionMessageAndNotes()
+heroku_buildpack_compile_actionMessageAndNotes()
 {
 	local actionMessage="$1"
 	shift 1
@@ -13,7 +13,7 @@ heroku_buildpack_actionMessageAndNotes()
 	fi
 }
 
-heroku_buildpack_notesMessages()
+heroku_buildpack_compile_notesMessages()
 {
 	local noteMessage
 	for noteMessage in "$@"
@@ -22,63 +22,92 @@ heroku_buildpack_notesMessages()
 	done
 }
 
-heroku_buildpack_endMessages()
+heroku_buildpack_compile_endMessages()
 {
 	printf '\n'
 }
 
 core_dependency_requires '*' mkdir
-heroku_buildpack_createCacheDirIfNotPresent()
+heroku_buildpack_compile_createCacheDirIfNotPresent()
 {
-	heroku_buildpack_actionMessageAndNotes "Creating cache directory '$heroku_buildpack_cacheDir' if not present"
+	heroku_buildpack_compile_actionMessageAndNotes "Creating cache directory '$heroku_buildpack_cacheDir' if not present"
 		mkdir -m 0755 -p "$heroku_buildpack_cacheDir"
-	heroku_buildpack_endMessages
+	heroku_buildpack_compile_endMessages
 }
 
-# Sadly, this approach will 'lost' any trailing line feeds
-heroku_buildpack_getEnvironmentVariableValue()
+# Sadly, this approach will 'lose' any trailing line feeds
+heroku_buildpack_compile_getEnvironmentVariableValue()
 {
 	local environmentVariableName="$1"
-	heroku_buildpack_notesMessages "Getting environment variable '$environmentVariableName'"
+	heroku_buildpack_compile_notesMessages "Getting environment variable '$environmentVariableName'"
 	printf '%s' "$(<"$heroku_buildpack_envDir"/"$environmentVariableName")"
 }
 
-heroku_buildpack_sourceKnownCompileEnvironmentVariables()
+heroku_buildpack_compile_sourceKnownCompileEnvironmentVariables()
 {
-	heroku_buildpack_actionMessageAndNotes "Getting environment variables"
+	heroku_buildpack_compile_actionMessageAndNotes "Getting environment variables"
 	
-		heroku_environmentVariable_STACK="$(heroku_buildpack_getEnvironmentVariableValue STACK)"
-		heroku_environmentVariable_SOURCE_VERSION="$(heroku_buildpack_getEnvironmentVariableValue SOURCE_VERSION)"
+		heroku_environmentVariable_STACK="$(heroku_buildpack_compile_getEnvironmentVariableValue STACK)"
+		heroku_environmentVariable_SOURCE_VERSION="$(heroku_buildpack_compile_getEnvironmentVariableValue SOURCE_VERSION)"
 	
-	heroku_buildpack_endMessages
+	heroku_buildpack_compile_endMessages
 
-	heroku_buildpack_actionMessageAndNotes "Validating environment variables" \
+	heroku_buildpack_compile_actionMessageAndNotes "Validating environment variables" \
 		"Validating environment variable 'STACK'"
 		local hasWarning="$(configure_validate_stack "$heroku_environmentVariable_STACK" 2>&1)"
 		if [ -n "$hasWarning" ]; then
 			core_exitError $core_commandLine_exitCode_CONFIG "Environment variable 'STACK' has unsupported value '$heroku_environmentVariable_STACK'"
 		fi
-	heroku_buildpack_endMessages
+	heroku_buildpack_compile_endMessages
 }
 
 core_dependency_requires '*' cp
-heroku_buildpack_deployHerokuBuildpackArtifacts()
+heroku_buildpack_compile_deployHerokuBuildpackArtifacts()
 {
-	cp -R "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/"$heroku_buildpacksConfigurationFolderName"/ "$heroku_buildpack_buildDir"/
+	heroku_buildpack_compile_actionMessageAndNotes "Deploying Heroku Buildpack Artifacts to BUILD_DIR '$heroku_buildpack_buildDir'"
+		cp -R "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/"$heroku_buildpacksConfigurationFolderName"/ "$heroku_buildpack_buildDir"/
+	heroku_buildpack_compile_endMessages
+}
+
+heroku_buildpack_compile_sourceCompileExtensions()
+{
+	
+}
+
+heroku_buildpack_compile_delegateToMultiBuildpack()
+{
+	heroku_buildpack_compile_actionMessageAndNotes "Delegating to 'heroku-buildpack-multi'"
+	heroku_buildpack_compile_endMessages
+	
+	cd "$heroku_buildpack_buildDir"/lib/heroku 1>/dev/null 2>/dev/null
+	
+		exec bin/compile "$heroku_buildpack_buildDir" "$heroku_buildpack_cacheDir" "$heroku_buildpack_envDir"
+	
+	cd -
+}
+
+# Interestingly, only uses the YAML of the last buildpack to execute
+heroku_buildpack_release_delegateToMultiBuildpack()
+{
+	cd "$heroku_buildpack_buildDir"/lib/heroku 1>/dev/null 2>/dev/null
+	
+		exec bin/release "$heroku_buildpack_buildDir"
+	
+	cd -
 }
 
 # core_dependency_requires '*' cat
-heroku_buildpack_releaseYaml()
-{
-	printf '%s' '--- {}'
-	return 0
-	
-	# cat <<-EOF
-	# 	---
-	# 	addons: []
-	# 	default_process_types: {}
-	# EOF
-}
+# heroku_buildpack_releaseYaml()
+# {
+# 	printf '%s' '--- {}'
+# 	return 0
+#
+# 	# cat <<-EOF
+# 	# 	---
+# 	# 	addons: []
+# 	# 	default_process_types: {}
+# 	# EOF
+# }
 
 heroku_buildpack_compileMisc()
 {

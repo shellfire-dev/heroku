@@ -8,16 +8,31 @@ core_dependency_declares heroku_configurationFolderName
 heroku_buildpacksConfigurationFolderName='buildpacks'
 core_dependency_declares heroku_buildpacksConfigurationFolderName
 
+heroku_environmentVariablesConfigurationFolderName='environment-variables'
+core_dependency_declares heroku_buildpacksConfigurationFolderName
+
 heroku_frameworkName='heroku-skeleton'
 core_dependency_declares heroku_frameworkName
 
-core_usesIn git
-heroku_createAppIfNecessaryThenDeploy()
+heroku_inRepository()
 {
-	if ! git_hasRemote "$heroku_repositoryPath" "$heroku_remote"; then
-		heroku_createApp
-	fi
-	heroku_deploy
+	pushd "$heroku_repositoryPath"
+	
+		heroku "$@"
+		
+	popd
+}
+
+core_dependency_requires '*' git cut
+core_usesIn git
+heroku_findBuildPackUrl()
+{
+	local submoduleName='.heroku.rc.d/heroku-skeleton-buildpack'
+	
+	local backpackUrl="$(git config --file "$heroku_repositoryPath"/.gitmodules --get "submodule.${submoduleName}.url")"
+	local backpackRevision="$(git_inRepository "$heroku_repositoryPath" submodule status "$submoduleName" | cut -c2-41)"
+	
+	heroku_buildpackUrl="${backpackUrl}#${backpackRevision}"
 }
 
 core_dependency_requires '*' heroku
@@ -27,11 +42,7 @@ heroku_createApp()
 		core_exitError $core_commandLine_exitCode_CANTCREAT "The .git folder in '$heroku_repositoryPath' is not writable; it needs to be when creating an app"
 	fi
 	
-	pushd "$heroku_repositoryPath"
-	
-		heroku create "$heroku_appName" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack https://github.com/kr/heroku-buildpack-inline.git#d094b444d6530dcc38dccf5d7844d6990380a08b
-		
-	popd
+	heroku_inRepository create "$heroku_appName" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack "$heroku_buildpackUrl"
 	
 	# We live in /app
 	# The PATH defaults to /usr/local/bin:/usr/bin:/bin
@@ -49,7 +60,7 @@ heroku_createApp()
 	#  Install fakechroot manually?
 	#  klik http://klik.atekon.de/ (Dead)
 	#  AppImageKit  https://github.com/probonopd/AppImageKit
-	#  apt-get source / dpkg -X (just does an extract)  https://serverfault.com/questions/23734/is-there-any-way-to-get-apt-to-install-packages-to-my-home-directory
+	#  apt-get source / dpkg -x (just does an extract)  https://serverfault.com/questions/23734/is-there-any-way-to-get-apt-to-install-packages-to-my-home-directory; this is what most solutions do, sadly.
 	#  linuxbrew
 
 
@@ -63,6 +74,69 @@ heroku_createApp()
 	# I'd also like to be able to run the heroku toolbelt on heroku itself, or at least do basic deployment using shell script and not ruby + java
 
 	# heroku run bash
+}
+
+core_usesIn git
+heroku_createAppIfNecessary()
+{
+	if ! git_hasRemote "$heroku_repositoryPath" "$heroku_remote"; then
+		heroku_createApp
+	fi
+}
+
+core_dependency_requires '*' heroku
+heroku_setEnvironmentVariables()
+{
+	# Not a perfect system, as there are other env variables that might not be in source control (for good reasons)
+	# Designed to support, say, the Ant buildpack: https://github.com/dennisg/heroku-buildpack-ant
+	# Strips any trailing line feeds, sadly
+	
+	heroku_environmentVariablesConfigurationFolderPath="$heroku_configurationFolderPath"/"$heroku_environmentVariablesConfigurationFolderName"
+
+	if ! core_path_isReadableAndSearchableAndWritableFolderPath "$heroku_environmentVariablesConfigurationFolderPath"; then
+		return 0
+	fi
+	
+	local environmentVariables
+	local environmentVariables_initialised
+	core_variable_array_initialise environmentVariables
+	
+	pushd "$heroku_environmentVariablesConfigurationFolderPath"
+		
+		local environmentVariableFileName
+		set +f
+		for environmentVariableFile in *
+		do
+			set -f
+			
+			if ! core_path_isReadableFilePath "$environmentVariableFile"; then
+				continue
+			fi
+			
+			case "$environmentVariableFile" in
+				
+				.*)
+					# Ignore .gitignore, etc files
+					continue
+				;;
+				
+			esac
+
+			core_variable_array_append environmentVariables "$environmentVariableFileName"="$(<"$environmentVariableFile")"
+			# We can unset any key, it needn't exist, but getting a list of keys without a silly message is hard
+			
+			
+		done
+		set -f
+		
+	popd
+	
+	_heroku_setEnvironmentVariables_callback()
+	{
+		heroku_inRepository config:set "$@"
+	}
+	
+	core_variable_array_passToFunctionAsArguments environmentVariables _heroku_setEnvironmentVariables_callback
 }
 
 core_usesIn git

@@ -2,10 +2,30 @@
 # Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
 
 
-core_snippet_embed raw validate_region
+core_dependency_requires '*' heroku tail head cut
+heroku_configure_initialise()
+{
+	local TMP_FILE
+	core_temporaryFiles_newFileToRemoveOnExit
+	heroku_configure_regionsFilePath="$TMP_FILE"
+	
+	heroku regions | tail -n +2 | head -n +2 | cut -d' ' -f1 >"$heroku_configure_regionsFilePath"
+}
+
+core_dependency_requires '*' grep
 configure_validate_region()
 {
-	configure_isValueValid validate_region "$1"
+	local configurationSettingValue="$1"
+	
+	if core_variable_isUnset heroku_configure_regionsFilePath; then
+		heroku_configure_initialise
+	fi
+	
+	if grep -q "$configurationSettingValue" "$heroku_configure_regionsFilePath"; then
+		return 0
+	fi
+	
+	core_message WARN "The configuration setting '$configurationSettingName' ('$configurationSettingValue') is not a valid '$snippetName'."
 }
 
 core_snippet_embed raw validate_stack
