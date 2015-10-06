@@ -18,7 +18,7 @@ heroku_inRepository()
 {
 	pushd "$heroku_repositoryPath"
 	
-		heroku "$@"
+		heroku "$@" 1>&2
 		
 	popd
 }
@@ -30,7 +30,7 @@ heroku_findBuildPackUrl()
 	local submoduleName='.heroku.rc.d/heroku-skeleton-buildpack'
 	
 	local backpackUrl="$(git config --file "$heroku_repositoryPath"/.gitmodules --get "submodule.${submoduleName}.url")"
-	local backpackRevision="$(git_inRepository "$heroku_repositoryPath" submodule status "$submoduleName" | cut -c2-41)"
+	local backpackRevision="$(git_inRepository "$heroku_repositoryPath" git submodule status "$submoduleName" | cut -c2-41)"
 	
 	heroku_buildpackUrl="${backpackUrl}#${backpackRevision}"
 }
@@ -83,6 +83,9 @@ heroku_createAppIfNecessary()
 		
 		# TODO: We only want to do these steps if things have changed...
 		heroku_inRepository buildpacks:set "$heroku_buildpackUrl"
+		
+		# Can be avoided by parsing 1st line of heroko info | head -n 1 | cut -c4
+		# except EPIPE results...
 		heroku_inRepository apps:rename "$heroku_appName"
 	else
 		heroku_createApp	
