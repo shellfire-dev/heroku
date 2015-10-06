@@ -17,10 +17,34 @@ core_dependency_declares heroku_frameworkName
 heroku_inRepository()
 {
 	pushd "$heroku_repositoryPath"
-	
-		heroku "$@" 1>&2
+		
+		set +e
+		heroku "$@" 1>"$_heroku_outputFilePath"
+		local exitCode=$?
+		set -e
 		
 	popd
+	
+	
+	if [ $exitCode -ne 0 ]; then
+		local warningLevel=FAIL
+	else
+		local warningLevel=INFO
+	fi
+	
+	core_message "$warningLevel" "$(<"$_heroku_outputFilePath")"
+	
+	if [ $exitCode -ne 0 ]; then
+		core_exitError $core_commandLine_exitCode_SOFTWARE "heroku '$@' failed with exit code '$exitCode'"
+	fi
+}
+
+heroku_initialise()
+{
+	local TMP_FILE
+	core_temporaryFiles_newFileToRemoveOnExit
+	
+	_heroku_outputFilePath="$TMP_FILE"
 }
 
 core_dependency_requires '*' git cut
