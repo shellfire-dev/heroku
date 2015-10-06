@@ -1,0 +1,23 @@
+# This file is part of heroku. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT. No part of heroku, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
+
+
+heroku_validate_region()
+{
+	local code=$1
+	local category="$2"
+	local name="$3"
+	local value="$4"
+		
+	case "$value" in
+		
+		eu|us)
+			:
+		;;
+		
+		*)
+			core_validate_exit "The $category '$name' specifies a region '$value' which is not one of 'eu' or 'us'"
+		;;
+		
+	esac
+}

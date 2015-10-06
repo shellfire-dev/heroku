@@ -1,0 +1,52 @@
+# This file is part of heroku. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT. No part of heroku, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
+
+
+heroku_setConstants()
+{
+	heroku_stack='cedar-14'
+	heroku_remote='heroku'
+}
+
+core_dependency_requires '*' heroku
+heroku_create_app()
+{
+	heroku create "$heroku_app" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack https://github.com/kr/heroku-buildpack-inline.git#d094b444d6530dcc38dccf5d7844d6990380a08b
+	
+	# We live in /app
+	# The PATH defaults to /usr/local/bin:/usr/bin:/bin
+	# /app contains our git repo, essentially, but less .git
+	# /usr/local/bin is empty but owned by root so we can't install to it
+	# We also have a .profile.d folder we can put scripts in, apparently
+	# Our file system is writable (but transient)
+
+
+	# We can run apt-get -d install, etc, and put them in our cache folder
+	# But deb packages aren't designed to be relocatable, we'd need to chroot, for which we need to be root...
+	# Other options:-
+	#  Rootless GoboLinux  http://www.gobolinux.org/?page=rootless
+	#  ArchLinux JuNest https://github.com/fsquillace/junest
+	#  Install fakechroot manually?
+	#  klik http://klik.atekon.de/ (Dead)
+	#  AppImageKit  https://github.com/probonopd/AppImageKit
+	#  apt-get source / dpkg -X (just does an extract)  https://serverfault.com/questions/23734/is-there-any-way-to-get-apt-to-install-packages-to-my-home-directory
+	#  linuxbrew
+
+
+	# Also examine
+	# https://github.com/heroku/heroku-buildpack-multi (combine buildpacks)
+	# https://github.com/peterkeen/heroku-buildpack-vendorbinaries (install from tarballs)
+	# https://github.com/docverter/docverter
+
+	# Personally, I'd like to move to a design where the heroku stuff is in a 'heroku' folder, but that requires a variant of the inline buildpack that doesn't look in 'bin'
+
+	# I'd also like to be able to run the heroku toolbelt on heroku itself, or at least do basic deployment using shell script and not ruby + java
+
+	# heroku run bash
+}
+
+core_dependency_requires '*' git
+heroku_deploy()
+{
+	git push "$heroku_remote" master
+}
