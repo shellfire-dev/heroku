@@ -34,6 +34,7 @@ configure_validate_stack()
 	configure_isValueValid validate_stack "$1"
 }
 
+core_usesIn configure
 heroku_configure_register()
 {
 	local potentialAppName="$(core_compatibility_basename "$heroku_repositoryPath")"
@@ -49,6 +50,7 @@ heroku_configure_register()
 	configure_register Value NotEmpty heroku refspec 'master'
 }
 
+core_usesIn configure
 heroku_configure_load()
 {
 	configure_reset heroku
