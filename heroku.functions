@@ -114,8 +114,7 @@ heroku_createAppIfNecessary()
 {
 	if git_hasRemote "$heroku_repositoryPath" "$heroku_remote"; then
 		
-		# TODO: We only want to do these steps if things have changed...
-		heroku_inRepository buildpacks:set "$heroku_buildpackUrl"
+		heroku_setBuildpackIfNecessary
 		
 		# Can be avoided by parsing 1st line of heroko info | head -n 1 | cut -c4
 		# except EPIPE results...
@@ -125,7 +124,15 @@ heroku_createAppIfNecessary()
 	fi
 }
 
-core_dependency_requires '*' heroku
+core_dependency_requires '*' tail
+heroku_setBuildpackIfNecessary()
+{
+	local existingBuildpack="$(heroku_inRepository buildpacks | tail -n 1)"
+	if [ "$existingBuildPack" != "$heroku_buildpackUrl" ]; then
+		heroku_inRepository buildpacks:set "$heroku_buildpackUrl"
+	fi
+}
+
 heroku_setEnvironmentVariables()
 {
 	# Not a perfect system, as there are other env variables that might not be in source control (for good reasons)
