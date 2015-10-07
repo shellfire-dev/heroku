@@ -63,6 +63,7 @@ _heroku_inRepository_printLinesIfAny()
 heroku_inRepository()
 {
 	local printStandardOut="$1"
+	shift 1
 	
 	pushd "$heroku_repositoryPath"
 		
