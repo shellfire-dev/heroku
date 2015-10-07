@@ -32,7 +32,6 @@ configure_validate_region()
 	core_message WARN "The configuration setting '$configurationSettingName' ('$configurationSettingValue') is not a valid 'region'."
 }
 
-core_snippet_embed raw validate_stack
 configure_validate_stack()
 {
 	local configurationSettingValue="$1"
