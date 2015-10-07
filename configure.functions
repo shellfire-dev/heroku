@@ -10,6 +10,10 @@ heroku_configure_initialise()
 	heroku_configure_regionsFilePath="$TMP_FILE"
 	
 	heroku regions | tail -n +2 | head -n +2 | cut -d' ' -f1 >"$heroku_configure_regionsFilePath"
+
+	core_temporaryFiles_newFileToRemoveOnExit
+	heroku_configure_stacksFilePath="$TMP_FILE"
+	core_snippet_retrieve "$snippetName" no "$heroku_configure_stacksFilePath"
 }
 
 core_dependency_requires '*' grep
@@ -25,13 +29,35 @@ configure_validate_region()
 		return 0
 	fi
 	
-	core_message WARN "The configuration setting '$configurationSettingName' ('$configurationSettingValue') is not a valid '$snippetName'."
+	core_message WARN "The configuration setting '$configurationSettingName' ('$configurationSettingValue') is not a valid 'region'."
 }
 
 core_snippet_embed raw validate_stack
 configure_validate_stack()
 {
-	configure_isValueValid validate_stack "$1"
+	local configurationSettingValue="$1"
+	
+	if core_variable_isUnset heroku_configure_stacksFilePath; then
+		heroku_configure_initialise
+	fi
+	
+	if grep -q "$configurationSettingValue" "$heroku_configure_stacksFilePath"; then
+		return 0
+	fi
+	
+	core_message WARN "The configuration setting '$configurationSettingName' ('$configurationSettingValue') is not a valid 'stack'."
+}
+
+heroku_configure_validateStack()
+{
+	local configurationSettingValue="$1"
+	local configurationSettingName='(irrelevant)'
+	local warning="$(configure_validate_stack "$configurationSettingValue" 2>&1)"
+	if [ -n "$warning" ]; then
+		return 1
+	else
+		return 0
+	fi
 }
 
 core_usesIn configure
