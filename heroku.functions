@@ -14,66 +14,6 @@ core_dependency_declares heroku_buildpacksConfigurationFolderName
 heroku_frameworkName='heroku-skeleton'
 core_dependency_declares heroku_frameworkName
 
-heroku_inRepository()
-{
-	pushd "$heroku_repositoryPath"
-		
-		set +e
-		heroku "$@" 1>"$_heroku_standardOutputFilePath" 2>"$_heroku_errorOutputFilePath"
-		local exitCode=$?
-		set -e
-		
-	popd
-	
-	if [ $exitCode -ne 0 ]; then
-		local warningLevel=FAIL
-	else
-		local warningLevel=INFO
-	fi
-	
-	if [ -s "$_heroku_standardOutputFilePath" ]; then
-		core_message "$warningLevel" "heroku: stdout: $(<"$_heroku_standardOutputFilePath")"
-	fi
-	
-	if [ -s "$_heroku_errorOutputFilePath" ]; then
-		core_message "$warningLevel" "heroku: stderr: $(<"$_heroku_errorOutputFilePath")"
-	fi
-	
-	if [ $exitCode -ne 0 ]; then
-		core_exitError $core_commandLine_exitCode_SOFTWARE "heroku '$@' failed with exit code '$exitCode'"
-	fi
-}
-
-heroku_inRepositoryPreserveStandardOut()
-{
-	pushd "$heroku_repositoryPath"
-		
-		set +e
-		heroku "$@" 2>"$_heroku_errorOutputFilePath"
-		local exitCode=$?
-		set -e
-		
-	popd
-	
-	if [ $exitCode -ne 0 ]; then
-		local warningLevel=FAIL
-	else
-		local warningLevel=INFO
-	fi
-	
-	if [ -s "$_heroku_standardOutputFilePath" ]; then
-		core_message "$warningLevel" "heroku: stdout: $(<"$_heroku_standardOutputFilePath")"
-	fi
-	
-	if [ -s "$_heroku_errorOutputFilePath" ]; then
-		core_message "$warningLevel" "heroku: stderr: $(<"$_heroku_errorOutputFilePath")"
-	fi
-	
-	if [ $exitCode -ne 0 ]; then
-		core_exitError $core_commandLine_exitCode_SOFTWARE "heroku '$@' failed with exit code '$exitCode'"
-	fi
-}
-
 heroku_initialise()
 {
 	local TMP_FILE
@@ -82,7 +22,72 @@ heroku_initialise()
 	_heroku_standardOutputFilePath="$TMP_FILE"
 	
 	core_temporaryFiles_newFileToRemoveOnExit
-	_heroku_errorOutputFilePath="$TMP_FILE"
+	_heroku_standardErrorFilePath="$TMP_FILE"
+}
+
+_heroku_inRepository_printLine()
+{
+	local message
+	if $afterFirst; then
+		message="> $line"
+	else
+		message="$line"
+	fi
+	core_message "$warningLevel" "heroku: $fileDescriptor: $message"
+}
+
+_heroku_inRepository_printLinesIfAny()
+{
+	local warningLevel="$1"
+	local fileDescriptor="$2"
+	local linesFilePath="$3"
+	
+	if [ ! -s "$linesFilePath" ]; then
+		return 0
+	fi
+	
+	local afterFirst=false
+	local line
+	while IFS= read -r line
+	do
+		_heroku_inRepository_printLine
+		afterFirst=true
+	done <"$linesFilePath"
+	# Read any final line not terminated by '\n'; too bad
+	if [ -n line ]; then
+		_heroku_inRepository_printLine
+		afterFirst=true
+	fi
+}
+
+heroku_inRepository()
+{
+	local printStandardOut="$1"
+	
+	pushd "$heroku_repositoryPath"
+		
+		set +e
+		heroku "$@" 1>"$_heroku_standardOutputFilePath" 2>"$_heroku_standardErrorFilePath"
+		local exitCode=$?
+		set -e
+		
+	popd
+	
+	local warningLevel
+	if [ $exitCode -ne 0 ]; then
+		warningLevel=WARN
+	else
+		warningLevel=INFO
+	fi
+	
+	if $printStandardOut; then
+		_heroku_inRepository_printLinesIfAny "$warningLevel" 'stdout' "$_heroku_standardOutputFilePath"
+	fi
+	_heroku_inRepository_printLinesIfAny "$warningLevel" 'stderr' "$_heroku_standardErrorFilePath"
+		
+	if [ $exitCode -ne 0 ]; then
+		core_exitError $core_commandLine_exitCode_SOFTWARE "heroku '$@' failed with exit code '$exitCode'"
+	fi
 }
 
 core_dependency_requires '*' git cut
@@ -104,7 +109,7 @@ heroku_createApp()
 		core_exitError $core_commandLine_exitCode_CANTCREAT "The .git folder in '$heroku_repositoryPath' is not writable; it needs to be when creating an app"
 	fi
 	
-	heroku_inRepository create "$heroku_appName" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack "$heroku_buildpackUrl"
+	heroku_inRepository true create "$heroku_appName" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack "$heroku_buildpackUrl"
 	
 	# We live in /app
 	# The PATH defaults to /usr/local/bin:/usr/bin:/bin
@@ -143,22 +148,33 @@ heroku_createAppIfNecessary()
 {
 	if git_hasRemote "$heroku_repositoryPath" "$heroku_remote"; then
 		
-		heroku_setBuildpackIfNecessary
+		heroku_changeBuildpackUrlIfDifferent
+		heroku_changeAppNameIfDifferent
 		
-		# Can be avoided by parsing 1st line of heroko info | head -n 1 | cut -c4
-		# except EPIPE results...
-		heroku_inRepository apps:rename "$heroku_appName"
 	else
 		heroku_createApp	
 	fi
 }
 
-core_dependency_requires '*' tail
-heroku_setBuildpackIfNecessary()
+core_dependency_requires '*' tail head
+heroku_changeBuildpackUrlIfDifferent()
 {
-	local existingBuildpack="$(heroku_inRepositoryPreserveStandardOut buildpacks | tail -n 1)"
-	if [ "$existingBuildpack" != "$heroku_buildpackUrl" ]; then
-		heroku_inRepository buildpacks:set "$heroku_buildpackUrl"
+	heroku_inRepository false buildpacks
+	local existingBuildpackUrl="$(tail -n +2 "$_heroku_standardOutputFilePath" | head -n 1)"
+	
+	if [ "$existingBuildpackUrl" != "$heroku_buildpackUrl" ]; then
+		heroku_inRepository true buildpacks:set "$heroku_buildpackUrl"
+	fi
+}
+
+core_dependency_requires '*' head cut
+heroku_changeAppNameIfDifferent()
+{
+	heroku_inRepository false info
+	local existingAppName="$(head -n 1 "$_heroku_standardOutputFilePath" | cut -c5-)"
+	
+	if [ "$existingAppName" != "$heroku_appName" ]; then
+		heroku_inRepository true apps:rename "$heroku_appName"
 	fi
 }
 
@@ -210,9 +226,12 @@ heroku_setEnvironmentVariables()
 	
 	_heroku_setEnvironmentVariables_callback()
 	{
-		heroku_inRepository config:set "$@"
+		if [ $# -eq 0 ]; then
+			return 0
+		fi
+		heroku_inRepository true config:set "$@"
 	}
-	
+
 	core_variable_array_passToFunctionAsArguments environmentVariables _heroku_setEnvironmentVariables_callback
 }
 
