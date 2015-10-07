@@ -57,6 +57,8 @@ heroku_configure_validateStack()
 	local configurationSettingValue="$1"
 	local configurationSettingName='(irrelevant)'
 	
+	configure_validate_stack "$configurationSettingValue"
+	
 	local warning="$(configure_validate_stack "$configurationSettingValue" 2>&1)"
 	if [ -n "$warning" ]; then
 		return 1
