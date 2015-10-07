@@ -29,7 +29,7 @@ configure_validate_region()
 		heroku_configure_initialise
 	fi
 	
-	if grep -q "$configurationSettingValue" "$heroku_configure_regionsFilePath"; then
+	if grep -q '^'"$configurationSettingValue"'$' "$heroku_configure_regionsFilePath"; then
 		return 0
 	fi
 	
@@ -45,7 +45,7 @@ configure_validate_stack()
 		heroku_configure_initialise
 	fi
 	
-	if grep -q "$configurationSettingValue" "$heroku_configure_stacksFilePath"; then
+	if grep -q '^'"$configurationSettingValue"'$' "$heroku_configure_stacksFilePath"; then
 		return 0
 	fi
 	
@@ -57,7 +57,10 @@ heroku_configure_validateStack()
 	local configurationSettingValue="$1"
 	local configurationSettingName='(irrelevant)'
 	
+	set -x
 	configure_validate_stack "$configurationSettingValue"
+	echo EXIT $?
+	exit 99
 	
 	local warning="$(configure_validate_stack "$configurationSettingValue" 2>&1)"
 	if [ -n "$warning" ]; then
