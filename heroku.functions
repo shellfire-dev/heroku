@@ -151,6 +151,7 @@ heroku_createAppIfNecessary()
 		
 		heroku_changeBuildpackUrlIfDifferent
 		heroku_changeAppNameIfDifferent
+		heroku_changeStackIfDifferent
 		
 	else
 		heroku_createApp	
@@ -176,6 +177,17 @@ heroku_changeAppNameIfDifferent()
 	
 	if [ "$existingAppName" != "$heroku_appName" ]; then
 		heroku_inRepository true apps:rename "$heroku_appName"
+	fi
+}
+
+core_dependency_requires '*' awk
+heroku_changeStackIfDifferent()
+{
+	heroku_inRepository false info
+	local existingStack="$(awk '$1 ~/^Stack:$/ {print $2}' "$_heroku_standardOutputFilePath")"
+	
+	if [ "$existingStack" != "$heroku_stack" ]; then
+		heroku_inRepository true stack:set "$heroku_stack"
 	fi
 }
 
