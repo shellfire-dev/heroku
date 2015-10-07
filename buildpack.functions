@@ -27,6 +27,17 @@ heroku_buildpack_compile_endMessages()
 	:
 }
 
+heroku_buildpack_compile_guardStack()
+{
+	# The only environment variables (ie in 'env') we can rely on are STACK and SOURCE_VERSION
+	heroku_buildpack_compile_actionMessageAndNotes "Validating environment variable STACK"
+		local hasWarning="$(configure_validate_stack "$STACK" 2>&1)"
+		if [ -n "$hasWarning" ]; then
+			core_exitError $core_commandLine_exitCode_CONFIG "Environment variable 'STACK' has unsupported value '$STACK'"
+		fi
+	heroku_buildpack_compile_endMessages
+}
+
 core_dependency_requires '*' mkdir
 heroku_buildpack_compile_createCacheDirIfNotPresent()
 {
@@ -39,28 +50,31 @@ heroku_buildpack_compile_createCacheDirIfNotPresent()
 }
 
 # Sadly, this approach will 'lose' any trailing line feeds
-heroku_buildpack_compile_getEnvironmentVariableValue()
+heroku_buildpack_compile_getConfigurationVariableValue()
 {
-	local environmentVariableName="$1"
-	heroku_buildpack_compile_notesMessages "Getting environment variable '$environmentVariableName'"
-	printf '%s' "$(<"$heroku_buildpack_envDir"/"$environmentVariableName")"
+	local configurationVariableName="$1"
+	
+	heroku_buildpack_compile_notesMessages "Getting environment variable '$configurationVariableName'"
+	
+	local variableToSetName=heroku_configurationVariable_${configurationVariableName}
+	local configurationVariableFilePath="$heroku_buildpack_envDir"/"$configurationVariableName"
+	
+	if [ ! -f "$configurationVariableFilePath" ]; then
+		core_exitError $core_commandLine_exitCode_CONFIG "There is no environment variable '$configurationVariableName' at '$configurationVariableFilePath'"
+	fi
+	core_variable_setVariable "$variableToSetName" "$(<"$configurationVariableFilePath")"
 }
 
-heroku_buildpack_compile_sourceKnownCompileEnvironmentVariables()
+heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
 {
-	heroku_buildpack_compile_actionMessageAndNotes "Getting environment variables"
+	heroku_buildpack_compile_actionMessageAndNotes "Getting configuration variables"
+		
+		env
+		ls -la "$heroku_buildpack_envDir"
+		
+		#heroku_buildpack_compile_getConfigurationVariableValue STACK
+		#heroku_buildpack_compile_getConfigurationVariableValue SOURCE_VERSION
 	
-		heroku_environmentVariable_STACK="$(heroku_buildpack_compile_getEnvironmentVariableValue STACK)"
-		heroku_environmentVariable_SOURCE_VERSION="$(heroku_buildpack_compile_getEnvironmentVariableValue SOURCE_VERSION)"
-	
-	heroku_buildpack_compile_endMessages
-
-	heroku_buildpack_compile_actionMessageAndNotes "Validating environment variables" \
-		"Validating environment variable 'STACK'"
-		local hasWarning="$(configure_validate_stack "$heroku_environmentVariable_STACK" 2>&1)"
-		if [ -n "$hasWarning" ]; then
-			core_exitError $core_commandLine_exitCode_CONFIG "Environment variable 'STACK' has unsupported value '$heroku_environmentVariable_STACK'"
-		fi
 	heroku_buildpack_compile_endMessages
 }
 
@@ -131,7 +145,7 @@ heroku_buildpack_compileMisc()
 	# # Original solution used heredocuments, which were then sourced; this does not work when /tmp is readonly,
 	# # even if TMPDIR is set elsewhere, as debian / ubuntu bash uses a hardcoded /tmp
 	# # http://stackoverflow.com/questions/1609423/using-sed-to-expand-environment-variables-inside-files
-	# template_createSedScriptOfEnvironmentVariableSubstitutions()
+	# template_createSedScriptOfConfigurationVariableSubstitutions()
 	# {
 	# 	env | sed 's/[\%]/\\&/g;s/\([^=]*\)=\(.*\)/s%${\1}%\2%g/'
 	# }
@@ -139,7 +153,7 @@ heroku_buildpack_compileMisc()
 	# template_templateFile()
 	# {
 	# 	set +e
-	# 	cat "$1" | sed -f <(template_createSedScriptOfEnvironmentVariableSubstitutions)
+	# 	cat "$1" | sed -f <(template_createSedScriptOfConfigurationVariableSubstitutions)
 	# 	set -e
 	# }
 	#
