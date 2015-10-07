@@ -1,0 +1,269 @@
+# This file is part of heroku. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT. No part of heroku, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
+
+
+core_dependency_requires '*' git cut
+core_usesIn git
+heroku_deploy_findBuildPackUrl()
+{
+	local submoduleName="$heroku_configurationFolderName"/"$heroku_moduleName"
+	
+	local backpackUrl="$(git config --file "$heroku_repositoryPath"/.gitmodules --get "submodule.${submoduleName}.url")"
+	local backpackRevision="$(git_inRepository "$heroku_repositoryPath" git submodule status "$submoduleName" | cut -c2-41)"
+	
+	heroku_buildpackUrl="${backpackUrl}#${backpackRevision}"
+}
+
+core_usesIn heroku toolbelt
+core_dependency_requires '*' heroku
+heroku_deploy_createApp()
+{
+	if ! core_path_isReadableAndSearchableAndWritableFolderPath "$heroku_repositoryPath"/.git; then
+		core_exitError $core_commandLine_exitCode_CANTCREAT "The .git folder in '$heroku_repositoryPath' is not writable; it needs to be when creating an app"
+	fi
+	
+	heroku_toolbelt_inRepository true create "$heroku_appName" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack "$heroku_buildpackUrl"
+}
+
+core_usesIn git
+heroku_deploy_createAppIfNecessary()
+{
+	if git_hasRemote "$heroku_repositoryPath" "$heroku_remote"; then
+		
+		heroku_deploy_changeBuildpackUrlIfDifferent
+		heroku_deploy_changeAppNameIfDifferent
+		heroku_deploy_changeStackIfDifferent
+		heroku_deploy_warnIfRegionIsDifferent
+		
+	else
+		heroku_deploy_createApp	
+	fi
+}
+
+core_usesIn heroku toolbelt
+core_dependency_requires '*' tail head
+heroku_deploy_changeBuildpackUrlIfDifferent()
+{
+	heroku_toolbelt_inRepository false buildpacks
+	local existingBuildpackUrl="$(tail -n +2 "$_heroku_toolbelt_standardOutputFilePath" | head -n 1)"
+	
+	if [ "$existingBuildpackUrl" != "$heroku_buildpackUrl" ]; then
+		heroku_toolbelt_inRepository true buildpacks:set "$heroku_buildpackUrl"
+	fi
+}
+
+core_usesIn heroku toolbelt
+core_dependency_requires '*' head cut
+heroku_deploy_changeAppNameIfDifferent()
+{
+	heroku_toolbelt_inRepository false info
+	local existingAppName="$(head -n 1 "$_heroku_toolbelt_standardOutputFilePath" | cut -c5-)"
+	
+	if [ "$existingAppName" != "$heroku_appName" ]; then
+		heroku_toolbelt_inRepository true apps:rename "$heroku_appName"
+	fi
+}
+
+core_usesIn heroku toolbelt
+core_dependency_requires '*' awk
+heroku_deploy_changeStackIfDifferent()
+{
+	heroku_toolbelt_inRepository false info
+	local existingStack="$(awk '$1 ~/^Stack:$/ {print $2}' "$_heroku_toolbelt_standardOutputFilePath")"
+	
+	if [ "$existingStack" != "$heroku_stack" ]; then
+		heroku_toolbelt_inRepository true stack:set "$heroku_stack"
+	fi
+}
+
+core_usesIn heroku toolbelt
+core_dependency_requires '*' awk
+heroku_deploy_warnIfRegionIsDifferent()
+{
+	heroku_toolbelt_inRepository false info
+	local existingRegion="$(awk '$1 ~/^Region:$/ {print $2}' "$_heroku_toolbelt_standardOutputFilePath")"
+	
+	if [ "$existingRegion" != "$heroku_region" ]; then
+		core_message WARN "Can not change region to '$heroku_region'. The app is currently running on the '$existingRegion' region; changing it is manual. See https://devcenter.heroku.com/articles/app-migration"
+	fi
+}
+
+core_usesIn heroku toolbelt
+heroku_deploy_maintenanceModeEnable()
+{
+	heroku_toolbelt_inRepository true maintenance:on
+}
+
+core_usesIn heroku toolbelt
+heroku_deploy_maintenanceModeDisable()
+{
+	heroku_toolbelt_inRepository true maintenance:off
+}
+
+core_dependency_requires '*' sort comm
+heroku_deploy_setDomains()
+{
+	local TMP_FILE
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local existingDomainsFilePath="$TMP_FILE"
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local sortedUniqueExistingDomainsFilePath="$TMP_FILE"
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local newDomainsFilePath="$TMP_FILE"
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local sortedUniqueNewDomainsFilePath="$TMP_FILE"
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local domainsToDeleteFilePath="$TMP_FILE"
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local domainsToAddFilePath="$TMP_FILE"
+	
+	# Logic based on format here (and experimentation): https://devcenter.heroku.com/articles/custom-domains#view-existing-domains
+	heroku_toolbelt_inRepository false domains
+	{
+		local startProcessing=false
+		local checkFirstProcessingLineForHerokuCruftIfNoDomains=false
+		local line
+		while IFS= read -r line
+		do
+			if [ "$line" = "=== $heroku_appName Custom Domains" ]; then
+				startProcessing=true
+				ignoreLines=2
+			elif $startProcessing; then
+				if [ $ignoreLines -ne 0 ]; then
+					ignoreLines=$((ignoreLines - 1))
+					continue
+				fi
+				# lack of quotes deliberate
+				IFS=' ' set -- $line
+				local domainName="$1"
+				local dnsTarget="$2"
+			
+				printf '%s\n' "$domainName"
+			fi
+		
+		done <"$_heroku_toolbelt_standardOutputFilePath"
+	} >"$existingDomainsFilePath"
+	
+	sort -u "$existingDomainsFilePath" >"$sortedUniqueExistingDomainsFilePath"
+	
+	_heroku_deploy_setDomains_callback()
+	{
+		local domainName="$core_variable_array_element"
+		printf '%s\n' "$domainName"
+	}
+	
+	configure_iterateOverArrayWithDefaultsIfEmpty heroku domains _heroku_deploy_setDomains_callback >"$newDomainsFilePath"
+	sort -u "$newDomainsFilePath" >"$sortedUniqueNewDomainsFilePath"
+	
+	local domainName
+	
+	# Domain names are case insensitive, hence -i
+	comm -23i "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToDeleteFilePath"
+	
+	while IFS="$(printf '\t')" read -r domainName
+	do
+		heroku_toolbelt_inRepository true domains:remove "$domainName"
+	done
+
+	comm -13i "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToAddFilePath"
+	
+	while IFS="$(printf '\t')" read -r domainName
+	do
+		heroku_toolbelt_inRepository true domains:add "$domainName"
+	done
+}
+
+core_usesIn heroku toolbelt
+heroku_deploy_setEnvironmentVariables()
+{
+	# Not a perfect system, as there are other env variables that might not be in source control (for good reasons)
+	# Designed to support, say, the Ant buildpack: https://github.com/dennisg/heroku-buildpack-ant
+	# Strips any trailing line feeds, sadly
+	
+	heroku_environmentVariablesConfigurationFolderPath="$heroku_configurationFolderPath"/"$heroku_environmentVariablesConfigurationFolderName"
+
+	if ! core_path_isReadableAndSearchableAndWritableFolderPath "$heroku_environmentVariablesConfigurationFolderPath"; then
+		return 0
+	fi
+	
+	local environmentVariables
+	local environmentVariables_initialised
+	core_variable_array_initialise environmentVariables
+	
+	pushd "$heroku_environmentVariablesConfigurationFolderPath"
+		
+		local environmentVariableFileName
+		set +f
+		for environmentVariableFile in *
+		do
+			set -f
+			
+			if ! core_path_isReadableFilePath "$environmentVariableFile"; then
+				continue
+			fi
+			
+			case "$environmentVariableFile" in
+				
+				.*)
+					# Ignore .gitignore, etc files
+					continue
+				;;
+				
+			esac
+
+			core_variable_array_append environmentVariables "$environmentVariableFileName"="$(<"$environmentVariableFile")"
+			# We can unset any key, it needn't exist, but getting a list of keys without a silly message is hard
+			
+			
+		done
+		set -f
+		
+	popd
+	
+	_heroku_deploy_setEnvironmentVariables_callback()
+	{
+		if [ $# -eq 0 ]; then
+			return 0
+		fi
+		heroku_toolbelt_inRepository true config:set "$@"
+	}
+
+	core_variable_array_passToFunctionAsArguments environmentVariables _heroku_deploy_setEnvironmentVariables_callback
+}
+
+_heroku_deploy_push_git()
+{
+	git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master 2>&1
+}
+
+_heroku_deploy_push_messageLine()
+{
+	local line
+	while IFS= read -r line
+	do
+		core_message NOTICE "push: $line"
+	done
+	if [ -n "$line" ]; then
+		core_message NOTICE "push: $line"
+	fi
+}
+
+core_usesIn core pipefail
+core_usesIn git
+heroku_deploy_push()
+{
+	set +e
+	core_pipefail_execute _heroku_deploy_push_git \| _heroku_deploy_push_messageLine
+	local exitCode=$?
+	set -e
+	
+	if [ $exitCode -ne 0 ]; then
+		core_exitError $core_commandLine_exitCode_PROTOCOL "Deployment failure"
+	fi
+}
