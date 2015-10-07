@@ -33,7 +33,7 @@ heroku_buildpack_compile_guardStack()
 	heroku_buildpack_compile_actionMessageAndNotes "Validating environment variable STACK"
 		local hasWarning="$(configure_validate_stack "$STACK" 2>&1)"
 		if [ -n "$hasWarning" ]; then
-			core_exitError $core_commandLine_exitCode_CONFIG "Environment variable 'STACK' has unsupported value '$STACK'"
+			core_exitError $core_commandLine_exitCode_CONFIG "Environment variable 'STACK' has unsupported value '$STACK': '$hasWarning'"
 		fi
 	heroku_buildpack_compile_endMessages
 }
