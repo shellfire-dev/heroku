@@ -152,6 +152,7 @@ heroku_createAppIfNecessary()
 		heroku_changeBuildpackUrlIfDifferent
 		heroku_changeAppNameIfDifferent
 		heroku_changeStackIfDifferent
+		heroku_warnIfRegionIsDifferent
 		
 	else
 		heroku_createApp	
@@ -188,6 +189,17 @@ heroku_changeStackIfDifferent()
 	
 	if [ "$existingStack" != "$heroku_stack" ]; then
 		heroku_inRepository true stack:set "$heroku_stack"
+	fi
+}
+
+core_dependency_requires '*' awk
+heroku_warnIfRegionIsDifferent()
+{
+	heroku_inRepository false info
+	local existingRegion="$(awk '$1 ~/^Region:$/ {print $2}' "$_heroku_standardOutputFilePath")"
+	
+	if [ "$existingRegion" != "$heroku_region" ]; then
+		core_message WARN "Can not change region to '$heroku_region'. The app is currently running on the '$existingRegion' region; changing it is manual. See https://devcenter.heroku.com/articles/app-migration"
 	fi
 }
 
