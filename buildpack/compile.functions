@@ -28,32 +28,25 @@ heroku_buildpack_compile_notesMessages()
 	done
 }
 
-heroku_buildpack_compile_endMessages()
-{
-	:
-}
-
 heroku_buildpack_compile_guardStack()
 {
 	# The only environment variables (ie in 'env') we can rely on are STACK and SOURCE_VERSION
 	heroku_buildpack_compile_actionMessageAndNotes "Validating environment variable STACK"
-		
-		if ! heroku_configure_validateStack "$STACK"; then
-			core_exitError $core_commandLine_exitCode_CONFIG "Environment variable 'STACK' has unsupported value '$STACK'"
-		fi
-		
-	heroku_buildpack_compile_endMessages
+	
+	if ! heroku_configure_validateStack "$STACK"; then
+		core_exitError $core_commandLine_exitCode_CONFIG "Environment variable 'STACK' has unsupported value '$STACK'"
+	fi
 }
 
 core_dependency_requires '*' mkdir
 heroku_buildpack_compile_createCacheDirIfNotPresent()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Creating cache directory '$heroku_buildpack_cacheDir' if not present"
-		mkdir -m 0755 -p "$heroku_buildpack_cacheDir"
-		pushd "$heroku_buildpack_cacheDir"
-			heroku_buildpack_cacheDir="$(pwd)"
-		popd
-	heroku_buildpack_compile_endMessages
+	
+	mkdir -m 0755 -p "$heroku_buildpack_cacheDir"
+	pushd "$heroku_buildpack_cacheDir"
+		heroku_buildpack_cacheDir="$(pwd)"
+	popd
 }
 
 # Sadly, this approach will 'lose' any trailing line feeds
@@ -75,16 +68,15 @@ heroku_buildpack_compile_getConfigurationVariableValue()
 heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Sourcing known configuration variables"
-			
-	heroku_buildpack_compile_endMessages
 }
 
 core_dependency_requires '*' cp
 heroku_buildpack_compile_deployHerokuBuildpackArtifacts()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Deploying Heroku Buildpack Artifacts to BUILD_DIR '$heroku_buildpack_buildDir'"
-		cp -R "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/"$heroku_buildpacksConfigurationFolderName"/ "$heroku_buildpack_buildDir"/
-	heroku_buildpack_compile_endMessages
+	
+	cp -R "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/"$heroku_buildpacksConfigurationFolderName"/ "$heroku_buildpack_buildDir"/
+	ls -la "$heroku_buildpack_buildDir"/
 }
 
 heroku_buildpack_compile_sourceCompileExtensions()
@@ -95,7 +87,8 @@ heroku_buildpack_compile_sourceCompileExtensions()
 heroku_buildpack_compile_delegateToMultiBuildpack()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Delegating to 'heroku-buildpack-multi'"
-	heroku_buildpack_compile_endMessages
+	
+	set -x
 	
 	cd "$heroku_buildpack_buildDir"/lib/heroku 1>/dev/null 2>/dev/null
 	
