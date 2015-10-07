@@ -32,6 +32,9 @@ heroku_buildpack_compile_createCacheDirIfNotPresent()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Creating cache directory '$heroku_buildpack_cacheDir' if not present"
 		mkdir -m 0755 -p "$heroku_buildpack_cacheDir"
+		pushd "$heroku_buildpack_cacheDir"
+			heroku_buildpack_cacheDir="$(pwd)"
+		popd
 	heroku_buildpack_compile_endMessages
 }
 
