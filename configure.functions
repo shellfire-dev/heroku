@@ -13,7 +13,7 @@ heroku_configure_initialise()
 
 	core_temporaryFiles_newFileToRemoveOnExit
 	heroku_configure_stacksFilePath="$TMP_FILE"
-	core_snippet_retrieve "$snippetName" no "$heroku_configure_stacksFilePath"
+	core_snippet_retrieve 'validate_stack' no "$heroku_configure_stacksFilePath"
 }
 
 core_dependency_requires '*' grep
