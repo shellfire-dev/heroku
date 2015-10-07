@@ -6,10 +6,10 @@ heroku_buildpack_compile_actionMessageAndNotes()
 {
 	local actionMessage="$1"
 	shift 1
-	printf '%s %s' '----->\n' "$actionMessage"
+	printf '%s %s\n' '----->' "$actionMessage"
 	
 	if [ $# -ne 0 ]; then
-		notesMessage "$@"
+		heroku_buildpack_compile_notesMessages "$@"
 	fi
 }
 
@@ -24,7 +24,7 @@ heroku_buildpack_compile_notesMessages()
 
 heroku_buildpack_compile_endMessages()
 {
-	printf '\n'
+	:
 }
 
 core_dependency_requires '*' mkdir
