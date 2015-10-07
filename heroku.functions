@@ -236,6 +236,11 @@ heroku_setEnvironmentVariables()
 	core_variable_array_passToFunctionAsArguments environmentVariables _heroku_setEnvironmentVariables_callback
 }
 
+_heroku_push_git()
+{
+	git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master 2>&1
+}
+
 _heroku_push_messageLine()
 {
 	local line
@@ -253,7 +258,7 @@ core_usesIn git
 heroku_push()
 {
 	set +e
-	core_pipefail_execute git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master \| _heroku_push_messageLine
+	core_pipefail_execute _heroku_push_git \| _heroku_push_messageLine
 	local exitCode=$?
 	set -e
 	
