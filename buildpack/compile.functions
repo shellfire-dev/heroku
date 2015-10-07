@@ -74,14 +74,8 @@ heroku_buildpack_compile_getConfigurationVariableValue()
 
 heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
 {
-	heroku_buildpack_compile_actionMessageAndNotes "Getting configuration variables"
-		
-		env
-		ls -la "$heroku_buildpack_envDir"
-		
-		#heroku_buildpack_compile_getConfigurationVariableValue STACK
-		#heroku_buildpack_compile_getConfigurationVariableValue SOURCE_VERSION
-	
+	heroku_buildpack_compile_actionMessageAndNotes "Sourcing known configuration variables"
+			
 	heroku_buildpack_compile_endMessages
 }
 
@@ -108,85 +102,4 @@ heroku_buildpack_compile_delegateToMultiBuildpack()
 		exec bin/compile "$heroku_buildpack_buildDir" "$heroku_buildpack_cacheDir" "$heroku_buildpack_envDir"
 	
 	cd -
-}
-
-# Interestingly, only uses the YAML of the last buildpack to execute
-heroku_buildpack_release_delegateToMultiBuildpack()
-{
-	cd "$heroku_buildpack_buildDir"/lib/heroku 1>/dev/null 2>/dev/null
-	
-		exec bin/release "$heroku_buildpack_buildDir"
-	
-	cd -
-}
-
-# core_dependency_requires '*' cat
-# heroku_buildpack_releaseYaml()
-# {
-# 	printf '%s' '--- {}'
-# 	return 0
-#
-# 	# cat <<-EOF
-# 	# 	---
-# 	# 	addons: []
-# 	# 	default_process_types: {}
-# 	# EOF
-# }
-
-heroku_buildpack_compileMisc()
-{
-	:
-	
-	# What we want to achieve:-
-	#
-	# - create an arbitary file system in a folder '/root'
-	# 	- have a template system we install
-	# - Use JuNest / ArchLinux or some other package manager (linuxbrew)
-	# - Allow install of arbitrary binaries https://github.com/Docverter/docverter/blob/master/.vendor_urls  /   https://github.com/peterkeen/heroku-buildpack-vendorbinaries (this is how pandoc is installed)
-	# - modify the PATH (use .profile.d scripts) https://devcenter.heroku.com/articles/profiled
-	# 	mkdir -m 0755 -p "$heroku_buildpack_buildDir"/.profile.d
-	# 	cp a script, eg
-	# 	export PATH=BLAH:"$PATH"
-	# - restrict the environment (use .profile.d scripts)
-	#
-	# # Original solution used heredocuments, which were then sourced; this does not work when /tmp is readonly,
-	# # even if TMPDIR is set elsewhere, as debian / ubuntu bash uses a hardcoded /tmp
-	# # http://stackoverflow.com/questions/1609423/using-sed-to-expand-environment-variables-inside-files
-	# template_createSedScriptOfConfigurationVariableSubstitutions()
-	# {
-	# 	env | sed 's/[\%]/\\&/g;s/\([^=]*\)=\(.*\)/s%${\1}%\2%g/'
-	# }
-	#
-	# template_templateFile()
-	# {
-	# 	set +e
-	# 	cat "$1" | sed -f <(template_createSedScriptOfConfigurationVariableSubstitutions)
-	# 	set -e
-	# }
-	#
-	# mkdir -m 0755 -p "$CACHE_DIR"
-	#
-	# rm -rf "$CACHE_DIR"/root/etc
-	# rsync -a -v --exclude=.gitignore "$BUILD_DIR"/heroku/root/ "$CACHE_DIR"/root/
-	# cp /etc/apt/trusted.gpg "$CACHE_DIR"/root/etc/apt
-	# rsync -a -v /etc/apt/trusted.gpg.d/ "$CACHE_DIR"/etc/apt/trusted.gpg.d/
-	#
-	# # Consider embedding this as a snippet / heredoc
-	# (
-	# 	export CACHE_DIR
-	# 	template_templateFile "$BUILD_DIR"/heroku/apt.conf.template >"$CACHE_DIR"/root/etc/apt/apt.conf
-	# )
-	#
-	# cp /etc/apt/sources.list "$CACHE_DIR"/root/etc/apt/sources.list
-	# rsync -a -v /etc/apt/preferences.d/ "$CACHE_DIR"/root/etc/apt/preferences.d/
-	#
-	# rsync -a -v /var/lib/dpkg/ "$CACHE_DIR"/root/var/lib/dpkg/
-	#
-	# # https://unix.stackexchange.com/questions/42567/how-to-install-program-locally-without-sudo-privileges
-	# # https://serverfault.com/questions/23734/is-there-any-way-to-get-apt-to-install-packages-to-my-home-directory
-	# APT_CONFIG="$CACHE_DIR"/root/etc/apt/apt.conf apt-get update
-	#
-	# # Need to run dpkg with --root="$CACHE_DIR"/root
-	#
-	# exit 0
 }
