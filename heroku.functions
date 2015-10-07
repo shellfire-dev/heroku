@@ -236,8 +236,28 @@ heroku_setEnvironmentVariables()
 	core_variable_array_passToFunctionAsArguments environmentVariables _heroku_setEnvironmentVariables_callback
 }
 
+_heroku_push_messageLine()
+{
+	local line
+	while IFS= read -r line
+	do
+		core_message NOTICE "push: $line"
+	done
+	if [ -n "$line" ]; then
+		core_message NOTICE "push: $line"
+	fi
+}
+
+core_usesIn core pipefail
 core_usesIn git
 heroku_push()
 {
-	git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master || core_exitError $core_commandLine_exitCode_PROTOCOL "Deployment failure"
+	set +e
+	core_pipefail_execute git_push "$heroku_repositoryPath" "$heroku_remote" "$heroku_refspec":master \| _heroku_push_messageLine
+	local exitCode=$?
+	set -e
+	
+	if [ $exitCode -ne 0 ]; then
+		core_exitError $core_commandLine_exitCode_PROTOCOL "Deployment failure"
+	fi
 }
