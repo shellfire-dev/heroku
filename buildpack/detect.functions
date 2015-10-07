@@ -13,8 +13,7 @@ heroku_buildpack_detect()
 	if ! core_path_isReadableAndSearchableFolderPath "$heroku_configurationFolderPath"; then
 		core_exitError $core_commandLine_exitCode_FAILURE "There is no heroku buildpacks configuration folder '$heroku_buildpacksConfigurationFolderName' in BUILD_DIR/$heroku_configurationFolderName '$heroku_configurationFolderPath'"
 	fi
-
-	# We take over from https://github.com/heroku/heroku-buildpack-multi
+	
 	local buildpacksFilePath="$heroku_buildpacksConfigurationFolderPath"/.buildpacks
 	if ! core_path_isReadableFilePath "$buildpacksFilePath"; then
 		core_exitError $core_commandLine_exitCode_FAILURE "There is no heroku '.buildpacks' in configuration folder path '$heroku_buildpacksConfigurationFolderPath'"
