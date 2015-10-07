@@ -203,6 +203,16 @@ heroku_warnIfRegionIsDifferent()
 	fi
 }
 
+heroku_maintenanceModeEnable()
+{
+	heroku_inRepository true maintenance:on
+}
+
+heroku_maintenanceModeDisable()
+{
+	heroku_inRepository true maintenance:off
+}
+
 heroku_setEnvironmentVariables()
 {
 	# Not a perfect system, as there are other env variables that might not be in source control (for good reasons)
