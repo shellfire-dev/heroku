@@ -45,6 +45,7 @@ configure_validate_stack()
 		heroku_configure_initialise
 	fi
 	
+	cat "$heroku_configure_stacksFilePath"
 	if grep -q '^'"$configurationSettingValue"'$' "$heroku_configure_stacksFilePath"; then
 		return 0
 	fi
