@@ -9,8 +9,12 @@ heroku_configure_initialise()
 	core_temporaryFiles_newFileToRemoveOnExit
 	heroku_configure_regionsFilePath="$TMP_FILE"
 	
-	heroku regions | tail -n +2 | head -n +2 | cut -d' ' -f1 >"$heroku_configure_regionsFilePath"
-
+	if core_compatibility_whichNoOutput heroku; then
+		heroku regions | tail -n +2 | head -n +2 | cut -d' ' -f1 >"$heroku_configure_regionsFilePath"
+	else
+		core_message DEBUG "Validation of regions is not possible as the heroku toolbelt 'heroku' is missing"
+	fi
+	
 	core_temporaryFiles_newFileToRemoveOnExit
 	heroku_configure_stacksFilePath="$TMP_FILE"
 	core_snippet_retrieve 'validate_stack' no "$heroku_configure_stacksFilePath"
@@ -52,8 +56,6 @@ heroku_configure_validateStack()
 {
 	local configurationSettingValue="$1"
 	local configurationSettingName='(irrelevant)'
-	
-	configure_validate_stack "$configurationSettingValue"
 	
 	local warning="$(configure_validate_stack "$configurationSettingValue" 2>&1)"
 	if [ -n "$warning" ]; then
