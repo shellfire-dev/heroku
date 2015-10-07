@@ -88,7 +88,7 @@ heroku_buildpack_compile_delegateToMultiBuildpack()
 	heroku_buildpack_compile_actionMessageAndNotes "Delegating to 'heroku-buildpack-multi'"
 	
 	set -x
-	cd "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/herkou-skeleton-buildpack/lib/heroku/heroku-buildpack-multi 1>/dev/null 2>/dev/null
+	cd "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/heroku-skeleton-buildpack/lib/heroku/heroku-buildpack-multi 1>/dev/null 2>/dev/null
 		
 		exec bin/compile "$heroku_buildpack_buildDir" "$heroku_buildpack_cacheDir" "$heroku_buildpack_envDir"
 	
