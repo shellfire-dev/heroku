@@ -11,7 +11,7 @@ core_dependency_declares heroku_buildpacksConfigurationFolderName
 heroku_environmentVariablesConfigurationFolderName='configuration-variables'
 core_dependency_declares heroku_buildpacksConfigurationFolderName
 
-heroku_frameworkName='heroku-skeleton'
+heroku_frameworkName='skeleton'
 core_dependency_declares heroku_frameworkName
 
 heroku_initialise()
@@ -23,6 +23,8 @@ heroku_initialise()
 	
 	core_temporaryFiles_newFileToRemoveOnExit
 	_heroku_standardErrorFilePath="$TMP_FILE"
+
+	heroku_moduleName='heroku-buildpack'-"$heroku_frameworkName"
 }
 
 _heroku_inRepository_printLine()
@@ -95,7 +97,7 @@ core_dependency_requires '*' git cut
 core_usesIn git
 heroku_findBuildPackUrl()
 {
-	local submoduleName='.heroku.rc.d/heroku-skeleton-buildpack'
+	local submoduleName="$heroku_configurationFolderName"/"$heroku_moduleName"
 	
 	local backpackUrl="$(git config --file "$heroku_repositoryPath"/.gitmodules --get "submodule.${submoduleName}.url")"
 	local backpackRevision="$(git_inRepository "$heroku_repositoryPath" git submodule status "$submoduleName" | cut -c2-41)"
