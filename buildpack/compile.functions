@@ -174,7 +174,7 @@ heroku_buildpack_compile_installRunRootOntoPath()
 		return 0
 	fi
 	
-	local rootFolderPath="$(heroku_runpack_getHome)"/.root
+	local rootFolderPath="$(heroku_buildpack_getHome)"/.root
 	
 	rsync --quiet -a "$runRootFolderPath"/ "$rootFolderPath"/
 }

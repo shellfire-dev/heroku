@@ -55,7 +55,7 @@ heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies()
 			# Ensure rmtree is in the install list!
 			printf '%s\n' 'brew-rmtree'
 		
-			if [ -s "$_heroku_buildpack_compile_dependenciesFilePath" ]; then
+			if [ -s "$dependenciesFilePath" ]; then
 				local packageToInstall
 				while IFS= read -r packageToInstall
 				do
