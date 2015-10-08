@@ -54,22 +54,31 @@ heroku_buildpack_detect_delegateToOtherBuildpacks()
 		local exitCode=$?
 		set -e
 		
-		echo E
+		if [ $exitCode -ne 0 ]; then
+		echo E1
 		exit 0
 		
-		if [ $exitCode -ne 0 ]; then
 			rm "$frameworkNameFilePath"
 			exit $exitCode
 		fi
 		
 		if [ ! -s "$frameworkNameFilePath" ]; then
+		echo E2
+		exit 0
+		
 			exit $exitCode
 			rm "$frameworkNameFilePath"
 		fi
 		
 		if [ -z "$_heroku_buildpack_detect_frameworks" ]; then
+		echo E3
+		exit 0
+		
 			_heroku_buildpack_detect_frameworks="$(<"$frameworkNameFilePath")"
 		else
+		echo E4
+		exit 0
+		
 			_heroku_buildpack_detect_frameworks=" $(<"$frameworkNameFilePath")"
 		fi
 	}
