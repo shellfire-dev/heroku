@@ -20,6 +20,23 @@ core_variable_indirectValue()
 	eval "core_variable_indirectValue_result=\"\$${1}\""
 }
 
+# -- Snip Here
+
+heroku_buildpack_getHome()
+{
+	local home
+	if core_variable_isSet HOME; then
+		home="$HOME"
+	else
+		home=~
+	fi
+	
+	# Make sure home is absolute
+	cd "$home" 1>/dev/null
+		pwd
+	cd - 1>/dev/null
+}
+
 heroku_buildpack_setPathVariable()
 {
 	local variable="$1"
@@ -48,27 +65,40 @@ heroku_buildpack_setLinuxbrewPathVariable()
 	heroku_buildpack_setPathVariable "$variable" "$folder" "$rootFolderPath" '.linuxbrew'
 }
 
+heroku_buildpack_setRootPathVariable()
+{
+	local variable="$1"
+	local folder="$2"
+	local rootFolderPath="$3"
+	
+	heroku_buildpack_setPathVariable "$variable" "$folder" "$rootFolderPath" '.root'
+}
+
 heroku_buildpack_run_setLinuxbrewPathVariable()
 {
 	local variable="$1"
 	local folder="$2"
-
-	local home
-	if core_variable_isSet HOME; then
-		home="$HOME"
-	else
-		home=~
-	fi
 	
-	# Make sure home is absolute
-	cd "$home" 1>/dev/null
-		home="$(pwd)"
-	cd - 1>/dev/null
-	
-	heroku_buildpack_setLinuxbrewPathVariable "$variable" "$folder" "$home"
+	heroku_buildpack_setLinuxbrewPathVariable "$variable" "$folder" "$(heroku_buildpack_getHome)"
 }
+
+heroku_buildpack_run_setRootPathVariable()
+{
+	local variable="$1"
+	local folder="$2"
+	
+	heroku_buildpack_setRootPathVariable "$variable" "$folder" "$(heroku_buildpack_getHome)"
+}
+
+# -- Snip End
+
 
 heroku_buildpack_run_setLinuxbrewPathVariable PATH bin
 heroku_buildpack_run_setLinuxbrewPathVariable MANPATH share/man
 heroku_buildpack_run_setLinuxbrewPathVariable INFOPATH share/info
 heroku_buildpack_run_setLinuxbrewPathVariable LD_LIBRARY_PATH lib
+
+heroku_buildpack_run_setRootPathVariable PATH bin
+heroku_buildpack_run_setRootPathVariable MANPATH share/man
+heroku_buildpack_run_setRootPathVariable INFOPATH share/info
+heroku_buildpack_run_setRootPathVariable LD_LIBRARY_PATH lib

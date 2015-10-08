@@ -106,6 +106,26 @@ heroku_buildpack_iterateOverBuildpacksToDelegateTo()
 	popd
 }
 
+
+
+
+# -- Snip Here
+
+heroku_buildpack_getHome()
+{
+	local home
+	if core_variable_isSet HOME; then
+		home="$HOME"
+	else
+		home=~
+	fi
+	
+	# Make sure home is absolute
+	cd "$home" 1>/dev/null
+		pwd
+	cd - 1>/dev/null
+}
+
 heroku_buildpack_setPathVariable()
 {
 	local variable="$1"
@@ -142,3 +162,23 @@ heroku_buildpack_setRootPathVariable()
 	
 	heroku_buildpack_setPathVariable "$variable" "$folder" "$rootFolderPath" '.root'
 }
+
+heroku_buildpack_run_setLinuxbrewPathVariable()
+{
+	local variable="$1"
+	local folder="$2"
+	
+	heroku_buildpack_setLinuxbrewPathVariable "$variable" "$folder" "$(heroku_buildpack_getHome)"
+}
+
+heroku_buildpack_run_setRootPathVariable()
+{
+	local variable="$1"
+	local folder="$2"
+	
+	heroku_buildpack_setRootPathVariable "$variable" "$folder" "$(heroku_buildpack_getHome)"
+}
+
+# -- Snip End
+
+

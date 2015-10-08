@@ -243,6 +243,40 @@ heroku_buildpack_compile_installBuildRootOntoPath()
 	fi
 }
 
+core_dependency_requires '*' mkdir rsync
+heroku_buildpack_compile_installProfileDScripts()
+{
+	local destinationProfileDFolderPath="$heroku_buildpack_buildDir"/.profile.d
+	mkdir -m 0755 -p "$destinationProfileDFolderPath"
+	
+	local runProfileDScripts="$heroku_compile_configurationFolderPath"/"$heroku_rootRunProfileDFolderName"
+	
+	if ! core_path_isReadableAndSearchableFolderPath "$runProfileDScripts"; then
+		return 0
+	fi
+	
+	rsync --quiet -a "$runProfileDScripts"/ "$destinationProfileDFolderPath"/
+}
+
+core_dependency_requires '*' rsync
+heroku_buildpack_compile_installRunRootOntoPath()
+{
+	local runRootFolderPath="$heroku_compile_configurationFolderPath"/"$heroku_rootBuildDependenciesFileName"
+	if ! core_path_isReadableAndSearchableFolderPath "$runRootFolderPath"; then
+
+		mkdir -m 0755 -p "$destinationProfileDFolderPath"
+		pushd "$destinationProfileDFolderPath"
+			mkdir -m 0755 bin info man lib
+		popd
+		
+		return 0
+	fi
+	
+	local rootFolderPath="$(heroku_runpack_getHome)"/.root
+	
+	rsync --quiet -a "$runRootFolderPath"/ "$rootFolderPath"/
+}
+
 heroku_buildpack_compile_sourceCompileExtensions()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Sourcing Compile extensions"
