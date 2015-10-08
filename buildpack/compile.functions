@@ -118,7 +118,7 @@ heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 	
 	core_temporaryFiles_newFileToRemoveOnExit
 	local sortedUniquePackagesWithoutTapsToIgnoreFilePath="$TMP_FILE"
-set -x
+	
 	{
 		# Ensure rmtree is in the install list!
 		printf '%s\n' 'brew-rmtree'
