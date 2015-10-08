@@ -60,6 +60,7 @@ heroku_buildpack_compile_createOurPrivateCacheDirIfNotPresent()
 }
 
 # Sadly, this approach will 'lose' any trailing line feeds
+core_dependency_requires '*' cat
 heroku_buildpack_compile_getConfigurationVariableValue()
 {
 	local configurationVariableName="$1"
@@ -72,7 +73,7 @@ heroku_buildpack_compile_getConfigurationVariableValue()
 	if [ ! -f "$configurationVariableFilePath" ]; then
 		core_exitError $core_commandLine_exitCode_CONFIG "There is no environment variable '$configurationVariableName' at '$configurationVariableFilePath'"
 	fi
-	core_variable_setVariable "$variableToSetName" "$(<"$configurationVariableFilePath")"
+	core_variable_setVariable "$variableToSetName" "$(cat "$configurationVariableFilePath")"
 }
 
 heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
@@ -164,9 +165,7 @@ heroku_buildpack_compile_installProfileDScripts()
 	local destinationProfileDFolderPath="$heroku_buildpack_buildDir"/.profile.d
 	mkdir -m 0755 -p "$destinationProfileDFolderPath"
 	
-	set -x
 	core_snippet_retrieve 'run_profile_d' no "$destinationProfileDFolderPath"/"$heroku_frameworkName".sh
-	set +x
 	
 	local runProfileDScripts="$heroku_compile_configurationFolderPath"/"$heroku_rootRunProfileDFolderName"
 	

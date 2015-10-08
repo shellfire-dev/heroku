@@ -204,6 +204,7 @@ heroku_deploy_setSsl()
 }
 
 core_usesIn heroku toolbelt
+core_dependency_requires '*' cat
 heroku_deploy_setEnvironmentVariables()
 {
 	# Not a perfect system, as there are other env variables that might not be in source control (for good reasons)
@@ -241,7 +242,7 @@ heroku_deploy_setEnvironmentVariables()
 				
 			esac
 
-			core_variable_array_append environmentVariables "$environmentVariableFile"="$(<"$environmentVariableFile")"
+			core_variable_array_append environmentVariables "$environmentVariableFile"="$(cat "$environmentVariableFile")"
 			# We can unset any key, it needn't exist, but getting a list of keys without a silly message is hard
 			
 			
