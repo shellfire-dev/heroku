@@ -50,9 +50,9 @@ heroku_buildpack_setPathVariable()
 		local core_variable_indirectValue_result
 		core_variable_indirectValue "$variable"
 	
-		core_variable_setVariable "$variable" "$path":"$core_variable_indirectValue_result"
+		core_variable_setAndExportVariable "$variable" "$path":"$core_variable_indirectValue_result"
 	else
-		core_variable_setVariable "$variable" "$path"
+		core_variable_setAndExportVariable "$variable" "$path"
 	fi
 }
 
