@@ -17,10 +17,10 @@ core_dependency_declares heroku_buildpacksConfigurationFolderName
 heroku_extensionsConfigurationFolderName='extensions'
 core_dependency_declares heroku_extensionsConfigurationFolderName
 
-heroku_linuxbrewBuildDependenciesFileName='build-dependencies.linuxbrew'
+heroku_linuxbrewBuildDependenciesFileName='build.linuxbrew'
 core_dependency_declares heroku_linuxbrewBuildDependenciesFileName
 
-heroku_linuxbrewRunDependenciesFileName='run-dependencies.linuxbrew'
+heroku_linuxbrewRunDependenciesFileName='run.linuxbrew'
 core_dependency_declares heroku_linuxbrewRunDependenciesFileName
 
 heroku_frameworkNameFileName='.framework-name'

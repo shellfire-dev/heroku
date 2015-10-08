@@ -120,21 +120,26 @@ heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 	local sortedUniquePackagesWithoutTapsToIgnoreFilePath="$TMP_FILE"
 set -x
 	{
-		local packageToInstall
-		while IFS= read -r packageToInstall
-		do
-			if [ -z "$packageToInstall" ]; then
-				continue
-			fi
+		# Ensure rmtree is in the install list!
+		printf '%s\n' 'brew-rmtree'
+		
+		if [ -s "$_heroku_buildpack_compile_dependenciesFileName" ]; then
+			local packageToInstall
+			while IFS= read -r packageToInstall
+			do
+				if [ -z "$packageToInstall" ]; then
+					continue
+				fi
 			
-			if core_variable_startsWith "$packageToInstall" '#'; then
-				continue
-			fi
+				if core_variable_startsWith "$packageToInstall" '#'; then
+					continue
+				fi
 			
-			# Is package already installed?
-			local package="$(core_compatibility_basename "$packageToInstall")"
-			printf '%s' "$package"
-		done <"$_heroku_buildpack_compile_dependenciesFileName"
+				# Is package already installed?
+				local package="$(core_compatibility_basename "$packageToInstall")"
+				printf '%s' "$package"
+			done <"$_heroku_buildpack_compile_dependenciesFileName"
+		fi
 	} | sort -u >"$sortedUniquePackagesWithoutTapsToInstallFilePath"
 	
 	brew list -1 | comm -23 - "$sortedUniquePackagesWithoutTapsToInstallFilePath" >"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
@@ -174,28 +179,30 @@ heroku_buildpack_compile_installLinuxbrewBuildDependencies()
 	local packagesToInstall_initialised
 	core_variable_array_initialise
 	
-	local packageToInstall
-	while IFS= read -r packageToInstall
-	do
-		if [ -z "$packageToInstall" ]; then
-			continue
-		fi
+	if [ -s "$_heroku_buildpack_compile_dependenciesFileName" ]; then
+		local packageToInstall
+		while IFS= read -r packageToInstall
+		do
+			if [ -z "$packageToInstall" ]; then
+				continue
+			fi
 		
-		if core_variable_startsWith "$packageToInstall" '#'; then
-			continue
-		fi
+			if core_variable_startsWith "$packageToInstall" '#'; then
+				continue
+			fi
 		
-		# Is package already installed?
-		local package="$(core_compatibility_basename "$packageToInstall")"
-		if brew list -1 | grep -q '^'"$package"'$'; then
-			continue
-		fi
+			# Is package already installed?
+			local package="$(core_compatibility_basename "$packageToInstall")"
+			if brew list -1 | grep -q '^'"$package"'$'; then
+				continue
+			fi
 		
-		core_variable_array_appendUniquely packagesToInstall "$packageToInstall"
-	done <"$_heroku_buildpack_compile_dependenciesFileName"
+			core_variable_array_appendUniquely packagesToInstall "$packageToInstall"
+		done <"$_heroku_buildpack_compile_dependenciesFileName"
 	
-	core_variable_unset core_dependency_check_forcePackageManagerUpgradeDuringInstall
-	core_variable_array_passToFunctionAsArguments packagesToInstall core_dependency_check_Homebrew_packageManager
+		core_variable_unset core_dependency_check_forcePackageManagerUpgradeDuringInstall
+		core_variable_array_passToFunctionAsArguments packagesToInstall core_dependency_check_Homebrew_packageManager
+	fi
 }
 
 heroku_buildpack_compile_sourceCompileExtensions()
