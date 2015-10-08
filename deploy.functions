@@ -176,20 +176,19 @@ heroku_deploy_setDomains()
 	
 	local domainName
 	
-	# Domain names are case insensitive, hence -i
 	comm -23 "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToDeleteFilePath"
 	
 	while IFS="$(printf '\t')" read -r domainName
 	do
 		heroku_toolbelt_inRepository true true domains:remove "$domainName"
-	done
+	done <"$domainsToDeleteFilePath"
 
 	comm -13 "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToAddFilePath"
 	
 	while IFS="$(printf '\t')" read -r domainName
 	do
 		heroku_toolbelt_inRepository true true domains:add "$domainName"
-	done
+	done <"$domainsToAddFilePath"
 }
 
 # This is a bit nasty: https://devcenter.heroku.com/articles/ssl-endpoint
