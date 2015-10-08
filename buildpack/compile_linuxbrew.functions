@@ -82,7 +82,7 @@ heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies()
 		done <"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
 	
 		# do not try to ignore things not installed
-		brew leaves -1 | | sort | comm -12 - "$sortedUniquePackagesWithoutTapsToRemoveFilePath" >"$sortedUniquePackagesWithoutTapsToIgnoreFilePath"
+		brew leaves -1 | sort | comm -12 - "$sortedUniquePackagesWithoutTapsToRemoveFilePath" >"$sortedUniquePackagesWithoutTapsToIgnoreFilePath"
 	
 		_heroku_buildpack_compile_removeNoLongerUsedPackages_callback()
 		{
