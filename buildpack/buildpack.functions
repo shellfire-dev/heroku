@@ -12,6 +12,7 @@ heroku_buildpack_frameworkNameFilePath()
 	frameworkNameFilePath="$buildpackBinFolderPath"/"$heroku_frameworkNameFileName"
 }
 
+core_dependency_requires '*' cat
 heroku_buildpack_sourceFrameworkName()
 {
 	local displayMessage="$1"
@@ -25,10 +26,7 @@ heroku_buildpack_sourceFrameworkName()
 		fi
 		exit $core_commandLine_exitCode_OSFILE
 	fi
-	heroku_buildpack_frameworkName="$(<"$frameworkNameFilePath")"
-	ls -la "$frameworkNameFilePath"
-	cat  "$frameworkNameFilePath"
-	echo XXXX $heroku_buildpack_frameworkName XXXX
+	heroku_buildpack_frameworkName="$(cat "$frameworkNameFilePath")"
 }
 
 heroku_buildpack_sourceEnvironment()
