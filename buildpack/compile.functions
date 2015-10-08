@@ -161,9 +161,9 @@ heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 	{
 		heroku_buildpack_compile_notesMessages "Removing unused linuxbrew build dependencies"
 		if [ -s "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" ]; then
-			cat "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" | xargs brew rmtree "$@" --ignore
+			cat "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" | xargs echo brew rmtree "$@" --ignore
 		else
-			 brew rmtree "$@"
+			echo brew rmtree "$@"
 		fi
 	}
 	
@@ -203,6 +203,11 @@ heroku_buildpack_compile_installLinuxbrewBuildDependencies()
 		core_variable_unset core_dependency_check_forcePackageManagerUpgradeDuringInstall
 		core_variable_array_passToFunctionAsArguments packagesToInstall core_dependency_check_Homebrew_packageManager
 	fi
+}
+
+heroku_buildpack_compile_makePackageManagerLinuxbrew()
+{
+	core_dependency_packageManager=Homebrew
 }
 
 heroku_buildpack_compile_sourceCompileExtensions()
