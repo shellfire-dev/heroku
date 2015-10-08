@@ -66,7 +66,7 @@ heroku_buildpack_detect_delegateToOtherBuildpacks()
 		if [ -z "$_heroku_buildpack_detect_frameworks" ]; then
 			_heroku_buildpack_detect_frameworks="$(cat "$frameworkNameFilePath")"
 		else
-			_heroku_buildpack_detect_frameworks=" $(cat "$frameworkNameFilePath")"
+			_heroku_buildpack_detect_frameworks="$_heroku_buildpack_detect_frameworks $(cat "$frameworkNameFilePath")"
 		fi
 	}
 	
