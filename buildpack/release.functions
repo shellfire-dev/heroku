@@ -23,7 +23,7 @@ heroku_buildpack_release_delegateToOtherBuildpacks()
 		fi
 	
 		set +e
-		local yaml="$(<"$releaseFilePath")"
+		local yaml="$(<"$releaseFilePath" "$heroku_buildpack_buildDir")"
 		local exitCode=$?
 		set -e
 	

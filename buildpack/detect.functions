@@ -50,7 +50,7 @@ heroku_buildpack_detect_delegateToOtherBuildpacks()
 	
 		
 		set +e
-		"$detectFilePath" >"$frameworkNameFilePath"
+		"$detectFilePath" "$heroku_buildpack_buildDir" >"$frameworkNameFilePath"
 		local exitCode=$?
 		set -e
 		
