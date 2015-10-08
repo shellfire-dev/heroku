@@ -159,11 +159,15 @@ heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 	
 	_heroku_buildpack_compile_removeNoLongerUsedPackages_callback()
 	{
+		if [ $# -eq 0 ]; then
+			return 0
+		fi
+		
 		heroku_buildpack_compile_notesMessages "Removing unused linuxbrew build dependencies"
 		if [ -s "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" ]; then
-			cat "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" | xargs echo brew rmtree "$@" --ignore
+			cat "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" | xargs brew rmtree "$@" --ignore
 		else
-			echo brew rmtree "$@"
+			brew rmtree "$@"
 		fi
 	}
 	
@@ -305,4 +309,13 @@ heroku_buildpack_compile_delegateToOtherBuildpacks()
 	}
 	
 	heroku_buildpack_iterateOverBuildpacksToDelegateTo _heroku_buildpack_compile_delegateToOtherBuildpacks_callback
+	
+	set -x
+	set +e
+	"$heroku_buildpack_buildDir"/.heroku.rc.d/buildpacks/heroku-skeleton-buildpack/bin/release "$heroku_buildpack_buildDir"
+	local exitCode=$?
+	set -e
+	
+	echo "Exit code was $exitCode"
+	exit 99
 }
