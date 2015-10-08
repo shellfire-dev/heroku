@@ -94,16 +94,17 @@ heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForBuildDependencies()
 		git clone --quiet "$heroku_linuxbrewRepositoryUrl" "$_heroku_buildpack_compile_linuxbrewFolderPath"
 	fi
 	
-	heroku_buildpack_setLinuxbrewPathVariable PATH bin "$_heroku_buildpack_compile_linuxbrewFolderPath"
-	heroku_buildpack_setLinuxbrewPathVariable MANPATH share/man "$_heroku_buildpack_compile_linuxbrewFolderPath"
-	heroku_buildpack_setLinuxbrewPathVariable INFOPATH share/info "$_heroku_buildpack_compile_linuxbrewFolderPath"
-	heroku_buildpack_setLinuxbrewPathVariable LD_LIBRARY_PATH lib "$_heroku_buildpack_compile_linuxbrewFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable PATH bin "$heroku_buildpack_ourPrivateCacheDir"
+	heroku_buildpack_setLinuxbrewPathVariable MANPATH share/man "$heroku_buildpack_ourPrivateCacheDir"
+	heroku_buildpack_setLinuxbrewPathVariable INFOPATH share/info "$heroku_buildpack_ourPrivateCacheDir"
+	heroku_buildpack_setLinuxbrewPathVariable LD_LIBRARY_PATH lib "$heroku_buildpack_ourPrivateCacheDir"
 }
 
 core_dependency_requires '*' sort comm cat xargs
 heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Removing no longer used linuxbrew dependencies" "Installing brew-rmtree if missing"
+	which brew
 	brew tap beeftornado/rmtree
 	brew install beeftornado/rmtree/brew-rmtree
 echo HELLO
