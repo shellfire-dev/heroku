@@ -6,6 +6,7 @@ core_usesIn heroku configure
 heroku_buildpack_compile_initialise()
 {
 	heroku_configure_initialise
+	heroku_buildpack_initialise
 }
 
 heroku_buildpack_compile_actionMessageAndNotes()
@@ -80,16 +81,178 @@ heroku_buildpack_compile_deployHerokuBuildpackArtifacts()
 
 heroku_buildpack_compile_sourceCompileExtensions()
 {
-	core_message WARN "Source Compile extensions"
+	heroku_buildpack_compile_actionMessageAndNotes "Sourcing Compile extensions"
+	
+	local extensionsFolderPath="$heroku_compile_configurationFolderPath"/"$heroku_extensionsConfigurationFolderName"
+	if ! core_path_isReadableAndSearchableFolderPath "$extensionsFolderPath"; then
+		heroku_buildpack_compile_notesMessages "There are no extensions"
+		return 0
+	fi
+	
+	pushd "$extensionsFolderPath"
+		
+		local compileExtensionFile
+		set +f
+		for compileExtensionFile in *.compile.sh
+		do
+			set -f
+			
+			heroku_buildpack_compile_notesMessages "Sourcing compile extension '$compileExtensionFile'"
+			
+			# ./ required for source to work in some shells
+			. ./"$compileExtensionFile"
+		done
+		set -f
+	
+	popd
 }
 
-heroku_buildpack_compile_delegateToMultiBuildpack()
+_heroku_buildpack_compile_delegateToMultiBuildpack_processBuildpackUrl()
 {
-	heroku_buildpack_compile_actionMessageAndNotes "Delegating to 'heroku-buildpack-multi'"
+	local url="${buildpackUrl%#*}"
+	local branch="${buildpackUrl#*#}"
 	
-	cd "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/"$heroku_moduleName"/lib/heroku/heroku-buildpack-multi 1>/dev/null 2>/dev/null
+	if [ -z "$url" ]; then
+		return 0
+	fi
+	
+	if [ "$url" = "$branch" ]; then
+		branch=''
+	fi
+	
+	local filename="$(core_compability_basename "$url")"
+	local allFileExtensions="${filename#*.}"
+	if [ ${#allFileExtensions} = ${#filename} ]; then
+		allFileExtensions=''
+	fi
+	
+	case "$allFileExtensions" in
 		
-		exec bin/compile "$heroku_buildpack_buildDir" "$heroku_buildpack_cacheDir" "$heroku_buildpack_envDir"
+		tar.gz|tgz)
+			:
+		;;
+		
+		git)
+			# Need to use the cache dir if possible... but how do we name our asset in it?
+			git clone "$url" "$SOME_DIR"
+			if [ -n "$branch" ]; then
+				pushd "$SOME_DIR"
+					git checkout "$branch"
+				popd
+			fi
+		;;
+		
+		*)
+			heroku_buildpack_compile_notesMessages "Do not understand how to extract URLs like '$url' with file extension '$allFileExtensions' (from '$buildpackUrl')"
+		;;
+		
+	esac
+	# check the file extension, if .git, then treat as a git repo
+}
+
+core_dependency_requires '*' chmod
+heroku_buildpack_compile_delegateToOtherBuildpacks()
+{
+	heroku_buildpack_compile_actionMessageAndNotes "Delegating to other buildpacks"
 	
-	cd -
+	_heroku_buildpack_compile_delegateToOtherBuildpacks_callback()
+	{
+		heroku_buildpack_compile_actionMessageAndNotes "Compiling buildpack '$buildpackFolderName'"
+		
+		heroku_buildpack_sourceFrameworkName true
+		
+		local compileFilePath="$buildpackBinFolderPath"/compile
+		if ! core_path_isReadableNonEmptyFilePath "$compileFilePath"; then
+			heroku_buildpack_compile_notesMessages "buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName' is missing 'compile'"
+			return 0
+		fi
+		
+		if ! core_path_isReadableNonEmptyExecutableFilePath "$compileFilePath"; then
+			heroku_buildpack_compile_notesMessages "buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName' has 'compile' without execute bit set; continuing, but you should fix this"
+			chmod +x "$compileFilePath"
+		fi
+
+		heroku_buildpack_compile_notesMessages "Compiling buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName'"
+		set +e
+		"$compileFilePath" "$heroku_buildpack_buildDir" "$heroku_buildpack_cacheDir" "$heroku_buildpack_envDir"
+		local exitCode=$?
+		set -e
+		
+		if [ $exitCode -ne 0 ]; then
+			heroku_buildpack_compile_notesMessages "Compiling buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName' failed with exit code '$exitCode'"
+			exit $core_commandLine_exitCode_FAILURE
+		fi
+		heroku_buildpack_compile_notesMessages "Compiled buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName'"
+		
+		heroku_buildpack_sourceEnvironment true
+	}
+	
+	heroku_buildpack_iterateOverBuildpacksToDelegateTo _heroku_buildpack_compile_delegateToOtherBuildpacks_callback
+		
+	local buildpackUrl
+	while IFS= read -r buildpackUrl
+	do
+		_heroku_buildpack_compile_delegateToMultiBuildpack_processBuildpackUrl
+	done <"$heroku_buildpack_buildDir"/.buildpacks
+	if [ -n "$buildpackUrl" ]; then
+		_heroku_buildpack_compile_delegateToMultiBuildpack_processBuildpackUrl
+	fi
+	
+	
+	for BUILDPACK in $(cat $1/.buildpacks); do
+	  dir=$(mktemp -t buildpackXXXXX)
+	  rm -rf $dir
+
+	  if [ "$url" != "" ]; then
+	    echo "=====> Downloading Buildpack: $url"
+
+	    if [[ "$url" =~ \.tgz$ ]] || [[ "$url" =~ \.tgz\? ]]; then
+	      mkdir -p "$dir"
+	      curl -s "$url" | tar xvz -C "$dir" >/dev/null 2>&1
+	    else
+	      git clone $url $dir >/dev/null 2>&1
+	    fi
+	    cd $dir
+
+	    if [ "$branch" != "" ]; then
+	      git checkout $branch >/dev/null 2>&1
+	    fi
+
+	    # we'll get errors later if these are needed and don't exist
+	    chmod -f +x $dir/bin/{detect,compile,release} || true
+
+	    framework=$($dir/bin/detect $1)
+
+	    if [ $? == 0 ]; then
+	      echo "=====> Detected Framework: $framework"
+	      $dir/bin/compile $1 $2 $3
+
+	      if [ $? != 0 ]; then
+	        exit 1
+	      fi
+
+	      # check if the buildpack left behind an environment for subsequent ones
+	      if [ -e $dir/export ]; then
+	        source $dir/export
+	      fi
+
+	      if [ -x $dir/bin/release ]; then
+	        $dir/bin/release $1 > $1/last_pack_release.out
+	      fi
+	    else
+	      echo "Couldn't detect any framework for this buildpack. Exiting."
+	      exit 1
+	    fi
+	  fi
+	done
+
+	if [ -e $1/last_pack_release.out ]; then
+	  echo "Using release configuration from last framework ($framework)."
+	fi
+	
+	
+	
+	
+	
+	
 }

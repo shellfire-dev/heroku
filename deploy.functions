@@ -22,7 +22,7 @@ heroku_deploy_createApp()
 		core_exitError $core_commandLine_exitCode_CANTCREAT "The .git folder in '$heroku_repositoryPath' is not writable; it needs to be when creating an app"
 	fi
 	
-	heroku_toolbelt_inRepository true create "$heroku_appName" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack "$heroku_buildpackUrl"
+	heroku_toolbelt_inRepository true true create "$heroku_appName" --stack "$heroku_stack" --region "$heroku_region" --remote "$heroku_remote" --buildpack "$heroku_buildpackUrl"
 }
 
 core_usesIn git
@@ -44,11 +44,11 @@ core_usesIn heroku toolbelt
 core_dependency_requires '*' tail head
 heroku_deploy_changeBuildpackUrlIfDifferent()
 {
-	heroku_toolbelt_inRepository false buildpacks
+	heroku_toolbelt_inRepository true false buildpacks
 	local existingBuildpackUrl="$(tail -n +2 "$_heroku_toolbelt_standardOutputFilePath" | head -n 1)"
 	
 	if [ "$existingBuildpackUrl" != "$heroku_buildpackUrl" ]; then
-		heroku_toolbelt_inRepository true buildpacks:set "$heroku_buildpackUrl"
+		heroku_toolbelt_inRepository true true buildpacks:set "$heroku_buildpackUrl"
 	fi
 }
 
@@ -56,11 +56,11 @@ core_usesIn heroku toolbelt
 core_dependency_requires '*' head cut
 heroku_deploy_changeAppNameIfDifferent()
 {
-	heroku_toolbelt_inRepository false info
+	heroku_toolbelt_inRepository true false info
 	local existingAppName="$(head -n 1 "$_heroku_toolbelt_standardOutputFilePath" | cut -c5-)"
 	
 	if [ "$existingAppName" != "$heroku_appName" ]; then
-		heroku_toolbelt_inRepository true apps:rename "$heroku_appName"
+		heroku_toolbelt_inRepository true true apps:rename "$heroku_appName"
 	fi
 }
 
@@ -68,11 +68,11 @@ core_usesIn heroku toolbelt
 core_dependency_requires '*' awk
 heroku_deploy_changeStackIfDifferent()
 {
-	heroku_toolbelt_inRepository false info
+	heroku_toolbelt_inRepository true false info
 	local existingStack="$(awk '$1 ~/^Stack:$/ {print $2}' "$_heroku_toolbelt_standardOutputFilePath")"
 	
 	if [ "$existingStack" != "$heroku_stack" ]; then
-		heroku_toolbelt_inRepository true stack:set "$heroku_stack"
+		heroku_toolbelt_inRepository true true stack:set "$heroku_stack"
 	fi
 }
 
@@ -80,7 +80,7 @@ core_usesIn heroku toolbelt
 core_dependency_requires '*' awk
 heroku_deploy_warnIfRegionIsDifferent()
 {
-	heroku_toolbelt_inRepository false info
+	heroku_toolbelt_inRepository true false info
 	local existingRegion="$(awk '$1 ~/^Region:$/ {print $2}' "$_heroku_toolbelt_standardOutputFilePath")"
 	
 	if [ "$existingRegion" != "$heroku_region" ]; then
@@ -91,13 +91,26 @@ heroku_deploy_warnIfRegionIsDifferent()
 core_usesIn heroku toolbelt
 heroku_deploy_maintenanceModeEnable()
 {
-	heroku_toolbelt_inRepository true maintenance:on
+	heroku_toolbelt_inRepository true true maintenance:on
 }
 
 core_usesIn heroku toolbelt
 heroku_deploy_maintenanceModeDisable()
 {
-	heroku_toolbelt_inRepository true maintenance:off
+	heroku_toolbelt_inRepository true true maintenance:off
+}
+
+heroku_deploy_setPreboot()
+{
+	local action
+	if core_variable_isTrue "$heroku_preboot"; then
+		action=enable
+	else
+		action=disable
+	fi
+
+	# Parsing the command line output of heroku features is just TOO painful, so we deliberately invoke errors
+	heroku_toolbelt_inRepository false false features:"$action" preboot
 }
 
 core_dependency_requires '*' sort comm
@@ -124,7 +137,7 @@ heroku_deploy_setDomains()
 	local domainsToAddFilePath="$TMP_FILE"
 	
 	# Logic based on format here (and experimentation): https://devcenter.heroku.com/articles/custom-domains#view-existing-domains
-	heroku_toolbelt_inRepository false domains
+	heroku_toolbelt_inRepository true false domains
 	{
 		local startProcessing=false
 		local checkFirstProcessingLineForHerokuCruftIfNoDomains=false
@@ -168,15 +181,27 @@ heroku_deploy_setDomains()
 	
 	while IFS="$(printf '\t')" read -r domainName
 	do
-		heroku_toolbelt_inRepository true domains:remove "$domainName"
+		heroku_toolbelt_inRepository true true domains:remove "$domainName"
 	done
 
 	comm -13i "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToAddFilePath"
 	
 	while IFS="$(printf '\t')" read -r domainName
 	do
-		heroku_toolbelt_inRepository true domains:add "$domainName"
+		heroku_toolbelt_inRepository true true domains:add "$domainName"
 	done
+}
+
+# This is a bit nasty: https://devcenter.heroku.com/articles/ssl-endpoint
+heroku_deploy_setSsl()
+{
+	# Really only needs to be done once
+	heroku_toolbelt_inRepository true true addons:create ssl:endpoint
+	
+	# We ought to keep the .csr, too
+	# .crt needs to include the certificate chain; need not include the public key (that makes it .pem)
+	heroku_toolbelt_inRepository true true certs:add server.crt server.key
+	
 }
 
 core_usesIn heroku toolbelt
@@ -231,7 +256,7 @@ heroku_deploy_setEnvironmentVariables()
 		if [ $# -eq 0 ]; then
 			return 0
 		fi
-		heroku_toolbelt_inRepository true config:set "$@"
+		heroku_toolbelt_inRepository true true config:set "$@"
 	}
 
 	core_variable_array_passToFunctionAsArguments environmentVariables _heroku_deploy_setEnvironmentVariables_callback

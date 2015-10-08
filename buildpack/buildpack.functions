@@ -1,0 +1,103 @@
+# This file is part of heroku. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT. No part of heroku, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
+
+
+heroku_buildpack_initialise()
+{
+	heroku_compile_configurationFolderPath="$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"
+}
+
+heroku_buildpack_frameworkNameFilePath()
+{
+	frameworkNameFilePath="$buildpackBinFolderPath"/"$heroku_frameworkNameFileName"
+}
+
+heroku_buildpack_sourceFrameworkName()
+{
+	local displayMessage="$1"
+	
+	local frameworkNameFilePath
+	heroku_buildpack_frameworkNameFilePath
+	
+	if ! core_path_isReadableNonEmptyFilePath "$frameworkNameFilePath"; then
+		if $displayMessage; then
+			heroku_buildpack_compile_notesMessages "buildpack '$buildpackFolderName' is missing framework name file '$heroku_frameworkNameFileName' which should have been created during run of 'detect'"
+		fi
+		exit $core_commandLine_exitCode_OSFILE
+	fi
+	heroku_buildpack_frameworkName="$(<"$frameworkNameFilePath")"
+}
+
+heroku_buildpack_sourceEnvironment()
+{
+	local displayMessage="$1"
+	
+	# Source any environment left behind (?why?)
+	local environmentExportsFilePath="$buildpackBinFolderPath"/export
+	if core_path_isReadableNonEmptyFilePath "$environmentExportsFilePath"; then
+		if $displayMessage; then
+			heroku_buildpack_compile_notesMessages "Sourcing 'export' for buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName'"
+		fi
+		. "$environmentExportsFilePath"
+	fi
+}
+
+core_dependency_requires '*' chmod
+heroku_buildpack_iterateOverBuildpacksToDelegateTo()
+{
+	local callback="$1"
+	shift 1
+	
+	pushd "$heroku_compile_configurationFolderPath"/"$heroku_buildpacksFolderName"
+		
+		set +f
+		local buildpackFolderName
+		local buildpackBinFolderPath
+		local detectFilePath
+		for buildpackFolderName in *
+		do
+			set -f
+			
+			if ! core_path_isReadableAndSearchableFolderPath "$buildpackFolderName"; then
+				continue
+			fi
+			
+			# Detect ourselves
+			if core_path_isReadableNonEmptyExecutableFilePath "$buildpackFolderName"/deploy; then
+				continue
+			fi
+			
+			buildpackBinFolderPath="$buildpackFolderName"/bin
+			
+			if ! core_path_isReadableAndSearchableFolderPath "$buildpackBinFolderPath"; then
+				continue
+			fi
+			
+			# Runs detect, detects the framework...
+			$callback "$@"
+			
+			# May not be executable, bizarrely
+
+			detectFilePath="$buildpackBinFolderPath"/detect
+			if ! core_path_isReadableNonEmptyFilePath "$detectFilePath"; then
+				continue
+			fi
+			if ! core_path_isReadableNonEmptyExecutableFilePath "$detectFilePath"; then
+				chmod +x "$detectFilePath"
+			fi
+			
+			
+			# release is optional
+			compileFilePath="$buildpackBinFolderPath"/compile
+			if ! core_path_isReadableNonEmptyFilePath "$compileFilePath"; then
+				continue
+			fi
+			if ! core_path_isReadableNonEmptyExecutableFilePath "$compileFilePath"; then
+				chmod +x "$compileFilePath"
+			fi
+			
+		done
+		set -f
+	
+	popd
+}

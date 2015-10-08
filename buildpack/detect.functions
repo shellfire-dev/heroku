@@ -2,7 +2,17 @@
 # Copyright © 2015 The developers of heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/raphaelcohn/heroku/master/COPYRIGHT.
 
 
-heroku_buildpack_detect()
+core_usesIn heroku
+core_usesIn heroku buildpack
+heroku_buildpack_detect_initialise()
+{
+	heroku_initialise
+	heroku_buildpack_initialise
+
+	_heroku_buildpack_detect_frameworks=''
+}
+
+heroku_buildpack_detect_us()
 {
 	local heroku_configurationFolderPath="$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"
 	if ! core_path_isReadableAndSearchableFolderPath "$heroku_configurationFolderPath"; then
@@ -13,12 +23,52 @@ heroku_buildpack_detect()
 	if ! core_path_isReadableAndSearchableFolderPath "$heroku_configurationFolderPath"; then
 		core_exitError $core_commandLine_exitCode_FAILURE "There is no heroku buildpacks configuration folder '$heroku_buildpacksConfigurationFolderName' in BUILD_DIR/$heroku_configurationFolderName '$heroku_configurationFolderPath'"
 	fi
-	
-	local buildpacksFilePath="$heroku_buildpacksConfigurationFolderPath"/.buildpacks
-	if ! core_path_isReadableFilePath "$buildpacksFilePath"; then
-		core_exitError $core_commandLine_exitCode_FAILURE "There is no heroku '.buildpacks' in configuration folder path '$heroku_buildpacksConfigurationFolderPath'"
-	fi
+}
 
-	printf '%s\n' "$heroku_frameworkName"
+core_dependency_requires '*' rm
+heroku_buildpack_detect_delegateToOtherBuildpacks()
+{
+	_heroku_buildpack_release_delegateToOtherBuildpacks_callback()
+	{
+		local detectFilePath="$buildpackBinFolderPath"/detect
+		if ! core_path_isReadableNonEmptyFilePath "$detectFilePath"; then
+			return 0
+		fi
+		
+		if ! core_path_isReadableNonEmptyExecutableFilePath "$detectFilePath"; then
+			chmod +x "$detectFilePath"
+		fi
+	
+		local frameworkNameFilePath
+		heroku_buildpack_frameworkNameFilePath
+	
+		set +e
+		"$detectFilePath" >"$frameworkNameFilePath"
+		local exitCode=$?
+		set -e
+		
+		if [ $exitCode -ne 0 ]; then
+			rm "$frameworkNameFilePath"
+			exit $exitCode
+		fi
+		
+		if [ ! -s "$frameworkNameFilePath" ]; then
+			exit $exitCode
+			rm "$frameworkNameFilePath"
+		fi
+		
+		if [ -z "$_heroku_buildpack_detect_frameworks" ]; then
+			_heroku_buildpack_detect_frameworks="$(<"$frameworkNameFilePath")"
+		else
+			_heroku_buildpack_detect_frameworks=" $(<"$frameworkNameFilePath")"
+		fi
+	}
+	
+	heroku_buildpack_iterateOverBuildpacksToDelegateTo _heroku_buildpack_release_delegateToOtherBuildpacks_callback
+}
+
+heroku_buildpack_detect_finish()
+{
+	printf '%s\n' "${heroku_frameworkName}(${_heroku_buildpack_detect_frameworks})"
 	exit $core_commandLine_exitCode_OK
 }

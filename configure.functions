@@ -79,6 +79,7 @@ heroku_configure_register()
 	configure_register Value stack heroku stack 'cedar-14'
 	configure_register Value NotEmpty heroku refspec 'master'
 	configure_register Array NotEmpty heroku domains
+	configure_register Value Boolean heroku preboot no
 }
 
 core_usesIn configure
@@ -93,4 +94,6 @@ heroku_configure_load()
 	heroku_remote="$(configure_getValue heroku remote)"
 	heroku_stack="$(configure_getValue heroku stack)"
 	heroku_refspec="$(configure_getValue heroku refspec)"
+	
+	heroku_preboot="$(configure_getValue heroku preboot)"
 }

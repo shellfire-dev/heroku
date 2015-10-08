@@ -16,8 +16,9 @@ heroku_toolbelt_initialise()
 core_dependency_requires '*' heroku
 heroku_toolbelt_inRepository()
 {
-	local printStandardOut="$1"
-	shift 1
+	local exitOnError="$1"
+	local printStandardOut="$2"
+	shift 2
 	
 	pushd "$heroku_repositoryPath"
 		
@@ -39,9 +40,11 @@ heroku_toolbelt_inRepository()
 		_heroku_toolbelt_inRepository_printLinesIfAny "$warningLevel" 'stdout' "$_heroku_toolbelt_standardOutputFilePath"
 	fi
 	_heroku_toolbelt_inRepository_printLinesIfAny "$warningLevel" 'stderr' "$_heroku_toolbelt_standardErrorFilePath"
-		
+	
 	if [ $exitCode -ne 0 ]; then
-		core_exitError $core_commandLine_exitCode_SOFTWARE "heroku '$@' failed with exit code '$exitCode'"
+		if $exitOnError; then
+			core_exitError $core_commandLine_exitCode_SOFTWARE "heroku '$@' failed with exit code '$exitCode'"
+		fi
 	fi
 }
 
