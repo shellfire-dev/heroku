@@ -159,7 +159,7 @@ heroku_buildpack_compile_installRunRootOntoPath()
 	ls -la "$rootFolderPath"
 }
 
-core_snippet_embed raw validate_deb_section run-profile-d
+core_snippet_embed raw run_profile_d
 core_dependency_requires '*' mkdir rsync
 heroku_buildpack_compile_installProfileDScripts()
 {
