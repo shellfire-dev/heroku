@@ -167,7 +167,7 @@ heroku_buildpack_compile_installProfileDScripts()
 	mkdir -m 0755 -p "$destinationProfileDFolderPath"
 	
 	
-	core_snippet_retrieve 'run-profile-d' no "$destinationProfileDFolderPath"/"$heroku_frameworkName".sh
+	core_snippet_retrieve 'run_profile_d' no "$destinationProfileDFolderPath"/"$heroku_frameworkName".sh
 	
 	
 	local runProfileDScripts="$heroku_compile_configurationFolderPath"/"$heroku_rootRunProfileDFolderName"
