@@ -105,3 +105,21 @@ heroku_buildpack_iterateOverBuildpacksToDelegateTo()
 	
 	popd
 }
+
+heroku_buildpack_setLinuxbrewPathVariable()
+{
+	local variable="$1"
+	local folder="$2"
+	local rootFolderPath="$3"
+	
+	local linuxbrewPath="$rootFolderPath"/.linuxbrew/"$folder"
+
+	if core_variable_isSet PATH; then
+		local core_variable_indirectValue
+		core_variable_indirectValue "$variable"
+	
+		core_variable_setVariable "$variable" "$linuxbrewPath":"$core_variable_indirectValue"
+	else
+		core_variable_setVariable "$variable" "$linuxbrewPath"
+	fi
+}

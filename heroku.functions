@@ -17,7 +17,13 @@ core_dependency_declares heroku_buildpacksConfigurationFolderName
 heroku_extensionsConfigurationFolderName='extensions'
 core_dependency_declares heroku_extensionsConfigurationFolderName
 
-heroku_frameworkNameFileName=.framework-name
+heroku_linuxbrewBuildDependenciesFileName='build-dependencies.linuxbrew'
+core_dependency_declares heroku_linuxbrewBuildDependenciesFileName
+
+heroku_linuxbrewRunDependenciesFileName='run-dependencies.linuxbrew'
+core_dependency_declares heroku_linuxbrewRunDependenciesFileName
+
+heroku_frameworkNameFileName='.framework-name'
 core_dependency_declares heroku_frameworkNameFileName
 
 heroku_frameworkName='skeleton'
@@ -25,6 +31,9 @@ core_dependency_declares heroku_frameworkName
 
 heroku_releaseYamlName='release.yaml'
 core_dependency_declares heroku_releaseYamlName
+
+heroku_linuxbrewRepositoryUrl='https://github.com/Homebrew/linuxbrew.git'
+core_dependency_declares heroku_linuxbrewRepositoryUrl
 
 heroku_initialise()
 {

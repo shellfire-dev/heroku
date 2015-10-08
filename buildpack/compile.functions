@@ -50,6 +50,15 @@ heroku_buildpack_compile_createCacheDirIfNotPresent()
 	popd
 }
 
+core_dependency_requires '*' mkdir
+heroku_buildpack_compile_createOurPrivateCacheDirIfNotPresent()
+{	
+	heroku_buildpack_compile_actionMessageAndNotes "Creating our private cache directory '$heroku_buildpack_cacheDir' if not present"
+	
+	heroku_buildpack_ourPrivateCacheDir="$heroku_buildpack_cacheDir"/"$heroku_frameworkName"
+	mkdir -m 0755 -p "$heroku_buildpack_ourPrivateCacheDir"
+}
+
 # Sadly, this approach will 'lose' any trailing line feeds
 heroku_buildpack_compile_getConfigurationVariableValue()
 {
@@ -69,6 +78,107 @@ heroku_buildpack_compile_getConfigurationVariableValue()
 heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Sourcing known configuration variables"
+}
+
+core_usesIn git
+heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForBuildDependencies()
+{
+	_heroku_buildpack_compile_linuxbrewFolderPath="$heroku_buildpack_ourPrivateCacheDir"/.linuxbrew
+	
+	if core_path_isReadableAndSearchableAndWritableFolderPath "$_heroku_buildpack_compile_linuxbrewFolderPath"/.git; then
+		heroku_buildpack_compile_actionMessageAndNotes "Updating linuxbrew in cache (for build dependencies); may take some time"
+		"$_heroku_buildpack_compile_linuxbrewFolderPath"/bin/brew update
+		return 0
+	else
+		heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew in cache (for build dependencies)"
+		git clone --quiet "$heroku_linuxbrewRepositoryUrl" "$_heroku_buildpack_compile_linuxbrewFolderPath"
+	fi
+	
+	heroku_buildpack_setLinuxbrewPathVariable PATH bin "$_heroku_buildpack_compile_linuxbrewFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable MANPATH share/man "$_heroku_buildpack_compile_linuxbrewFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable INFOPATH share/info "$_heroku_buildpack_compile_linuxbrewFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable LD_LIBRARY_PATH lib "$_heroku_buildpack_compile_linuxbrewFolderPath"
+
+}
+
+core_dependencies_requires '*' sort comm cat xargs
+heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
+{
+	heroku_buildpack_compile_notesMessages "Installing brew-rmtree if missing"
+	brew tap beeftornado/rmtree 1>/dev/null 2>/dev/null
+	brew install beeftornado/rmtree/brew-rmtree
+	
+	_heroku_buildpack_compile_dependenciesFileName="$heroku_compile_configurationFolderPath"/"$heroku_linuxbrewBuildDependenciesFileName"
+
+	local TMP_FILE
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local sortedUniquePackagesWithoutTapsToInstallFilePath="$TMP_FILE"
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local sortedUniquePackagesWithoutTapsToRemoveFilePath="$TMP_FILE"
+	
+	core_temporaryFiles_newFileToRemoveOnExit
+	local sortedUniquePackagesWithoutTapsToIgnoreFilePath="$TMP_FILE"
+	
+	{
+		local packageToInstall
+		while IFS= read -r packageToInstall
+		do
+			# Is package already installed?
+			local package="$(core_compatibility_basename "$packageToInstall")"
+			printf '%s' "$package"
+		done <"$dependenciesFileName"
+	} | sort -u >"$sortedUniquePackagesWithoutTapsToInstallFilePath"
+	
+	brew list -1 | comm -23 - "$sortedUniquePackagesWithoutTapsToInstallFilePath" >"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
+	
+	local packagesToRemove
+	local packagesToRemove_initialised
+	core_variable_array_initialise
+	
+	local packageToRemove
+	while IFS= read -r packageToRemove
+	do
+		core_variable_array_append packagesToRemove "$packageToRemove"
+	done <"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
+	
+	# do not try to ignore things not installed
+	brew list -1 | comm -12 - "$sortedUniquePackagesWithoutTapsToRemoveFilePath" >"$sortedUniquePackagesWithoutTapsToIgnoreFilePath"
+	
+	_heroku_buildpack_compile_removeNoLongerUsedPackages_callback()
+	{
+		if [ -s "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" ]; then
+			cat "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" | xargs brew rmtree "$@" --ignore
+		else
+			 brew rmtree "$@"
+		fi
+	}
+	
+	core_variable_array_passToFunctionAsArguments packagesToRemove _heroku_buildpack_compile_removeNoLongerUsedPackages_callback
+}
+
+core_dependencies_requires '*' grep
+heroku_buildpack_compile_installLinuxbrewBuildDependencies()
+{
+	local packagesToInstall
+	local packagesToInstall_initialised
+	core_variable_array_initialise
+	
+	local packageToInstall
+	while IFS= read -r packageToInstall
+	do
+		# Is package already installed?
+		local package="$(core_compatibility_basename "$packageToInstall")"
+		if brew list -1 | grep -q '^'"$package"'$'; then
+			continue
+		fi
+		
+		core_variable_array_appendUniquely packagesToInstall "$packageToInstall"
+	done <"$_heroku_buildpack_compile_dependenciesFileName"
+	
+	core_variable_unset core_dependency_check_forcePackageManagerUpgradeDuringInstall
+	core_variable_array_passToFunctionAsArguments packagesToInstall core_dependency_check_Homebrew_packageManager
 }
 
 heroku_buildpack_compile_sourceCompileExtensions()
@@ -97,49 +207,6 @@ heroku_buildpack_compile_sourceCompileExtensions()
 		set -f
 	
 	popd
-}
-
-_heroku_buildpack_compile_delegateToMultiBuildpack_processBuildpackUrl()
-{
-	local url="${buildpackUrl%#*}"
-	local branch="${buildpackUrl#*#}"
-	
-	if [ -z "$url" ]; then
-		return 0
-	fi
-	
-	if [ "$url" = "$branch" ]; then
-		branch=''
-	fi
-	
-	local filename="$(core_compability_basename "$url")"
-	local allFileExtensions="${filename#*.}"
-	if [ ${#allFileExtensions} = ${#filename} ]; then
-		allFileExtensions=''
-	fi
-	
-	case "$allFileExtensions" in
-		
-		tar.gz|tgz)
-			:
-		;;
-		
-		git)
-			# Need to use the cache dir if possible... but how do we name our asset in it?
-			git clone "$url" "$SOME_DIR"
-			if [ -n "$branch" ]; then
-				pushd "$SOME_DIR"
-					git checkout "$branch"
-				popd
-			fi
-		;;
-		
-		*)
-			heroku_buildpack_compile_notesMessages "Do not understand how to extract URLs like '$url' with file extension '$allFileExtensions' (from '$buildpackUrl')"
-		;;
-		
-	esac
-	# check the file extension, if .git, then treat as a git repo
 }
 
 core_dependency_requires '*' chmod
@@ -180,71 +247,4 @@ heroku_buildpack_compile_delegateToOtherBuildpacks()
 	}
 	
 	heroku_buildpack_iterateOverBuildpacksToDelegateTo _heroku_buildpack_compile_delegateToOtherBuildpacks_callback
-		
-	local buildpackUrl
-	while IFS= read -r buildpackUrl
-	do
-		_heroku_buildpack_compile_delegateToMultiBuildpack_processBuildpackUrl
-	done <"$heroku_buildpack_buildDir"/.buildpacks
-	if [ -n "$buildpackUrl" ]; then
-		_heroku_buildpack_compile_delegateToMultiBuildpack_processBuildpackUrl
-	fi
-	
-	
-	for BUILDPACK in $(cat $1/.buildpacks); do
-	  dir=$(mktemp -t buildpackXXXXX)
-	  rm -rf $dir
-
-	  if [ "$url" != "" ]; then
-	    echo "=====> Downloading Buildpack: $url"
-
-	    if [[ "$url" =~ \.tgz$ ]] || [[ "$url" =~ \.tgz\? ]]; then
-	      mkdir -p "$dir"
-	      curl -s "$url" | tar xvz -C "$dir" >/dev/null 2>&1
-	    else
-	      git clone $url $dir >/dev/null 2>&1
-	    fi
-	    cd $dir
-
-	    if [ "$branch" != "" ]; then
-	      git checkout $branch >/dev/null 2>&1
-	    fi
-
-	    # we'll get errors later if these are needed and don't exist
-	    chmod -f +x $dir/bin/{detect,compile,release} || true
-
-	    framework=$($dir/bin/detect $1)
-
-	    if [ $? == 0 ]; then
-	      echo "=====> Detected Framework: $framework"
-	      $dir/bin/compile $1 $2 $3
-
-	      if [ $? != 0 ]; then
-	        exit 1
-	      fi
-
-	      # check if the buildpack left behind an environment for subsequent ones
-	      if [ -e $dir/export ]; then
-	        source $dir/export
-	      fi
-
-	      if [ -x $dir/bin/release ]; then
-	        $dir/bin/release $1 > $1/last_pack_release.out
-	      fi
-	    else
-	      echo "Couldn't detect any framework for this buildpack. Exiting."
-	      exit 1
-	    fi
-	  fi
-	done
-
-	if [ -e $1/last_pack_release.out ]; then
-	  echo "Using release configuration from last framework ($framework)."
-	fi
-	
-	
-	
-	
-	
-	
 }
