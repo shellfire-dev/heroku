@@ -80,138 +80,22 @@ heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
 	heroku_buildpack_compile_actionMessageAndNotes "Sourcing known configuration variables"
 }
 
-core_usesIn git
+core_usesIn heroku/buildpack compile_functions
 heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForBuildDependencies()
 {
-	_heroku_buildpack_compile_linuxbrewFolderPath="$heroku_buildpack_ourPrivateCacheDir"/.linuxbrew
-	
-	if core_path_isReadableAndSearchableAndWritableFolderPath "$_heroku_buildpack_compile_linuxbrewFolderPath"/.git; then
-		heroku_buildpack_compile_actionMessageAndNotes "Updating linuxbrew in cache (for build dependencies); may take some time"
-		"$_heroku_buildpack_compile_linuxbrewFolderPath"/bin/brew update
-		return 0
-	else
-		heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew in cache (for build dependencies)"
-		git clone --quiet "$heroku_linuxbrewRepositoryUrl" "$_heroku_buildpack_compile_linuxbrewFolderPath"
-	fi
-	
-	heroku_buildpack_setLinuxbrewPathVariable PATH bin "$heroku_buildpack_ourPrivateCacheDir"
-	heroku_buildpack_setLinuxbrewPathVariable MANPATH share/man "$heroku_buildpack_ourPrivateCacheDir"
-	heroku_buildpack_setLinuxbrewPathVariable INFOPATH share/info "$heroku_buildpack_ourPrivateCacheDir"
-	heroku_buildpack_setLinuxbrewPathVariable LD_LIBRARY_PATH lib "$heroku_buildpack_ourPrivateCacheDir"
+	heroku_buildpack_compile_linuxbrew_installOrUpdate 'build'
 }
 
-core_dependency_requires '*' sort comm cat xargs
+core_usesIn heroku/buildpack compile_functions
 heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 {
-	heroku_buildpack_compile_actionMessageAndNotes "Removing no longer used linuxbrew dependencies" "Installing brew-rmtree if missing"
-	brew tap beeftornado/rmtree 1>/dev/null 2>/dev/null
-	brew install beeftornado/rmtree/brew-rmtree 1>/dev/null 2>/dev/null
-	_heroku_buildpack_compile_dependenciesFileName="$heroku_compile_configurationFolderPath"/"$heroku_linuxbrewBuildDependenciesFileName"
-
-	local TMP_FILE
-	
-	core_temporaryFiles_newFileToRemoveOnExit
-	local sortedUniquePackagesWithoutTapsToInstallFilePath="$TMP_FILE"
-	
-	core_temporaryFiles_newFileToRemoveOnExit
-	local sortedUniquePackagesWithoutTapsToRemoveFilePath="$TMP_FILE"
-	
-	core_temporaryFiles_newFileToRemoveOnExit
-	local sortedUniquePackagesWithoutTapsToIgnoreFilePath="$TMP_FILE"
-	
-	{
-		# Ensure rmtree is in the install list!
-		printf '%s\n' 'brew-rmtree'
-		
-		if [ -s "$_heroku_buildpack_compile_dependenciesFileName" ]; then
-			local packageToInstall
-			while IFS= read -r packageToInstall
-			do
-				if [ -z "$packageToInstall" ]; then
-					continue
-				fi
-			
-				if core_variable_startsWith "$packageToInstall" '#'; then
-					continue
-				fi
-			
-				# Is package already installed?
-				local package="$(core_compatibility_basename "$packageToInstall")"
-				printf '%s' "$package"
-			done <"$_heroku_buildpack_compile_dependenciesFileName"
-		fi
-	} | sort -u >"$sortedUniquePackagesWithoutTapsToInstallFilePath"
-	
-	brew list -1 | comm -23 - "$sortedUniquePackagesWithoutTapsToInstallFilePath" >"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
-	
-	local packagesToRemove
-	local packagesToRemove_initialised
-	core_variable_array_initialise packagesToRemove
-	
-	local packageToRemove
-	while IFS= read -r packageToRemove
-	do
-		core_variable_array_append packagesToRemove "$packageToRemove"
-	done <"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
-	
-	# do not try to ignore things not installed
-	brew list -1 | comm -12 - "$sortedUniquePackagesWithoutTapsToRemoveFilePath" >"$sortedUniquePackagesWithoutTapsToIgnoreFilePath"
-	
-	_heroku_buildpack_compile_removeNoLongerUsedPackages_callback()
-	{
-		if [ $# -eq 0 ]; then
-			return 0
-		fi
-		
-		heroku_buildpack_compile_notesMessages "Removing unused linuxbrew build dependencies"
-		if [ -s "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" ]; then
-			cat "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" | xargs brew rmtree "$@" --ignore
-		else
-			brew rmtree "$@"
-		fi
-	}
-	
-	core_variable_array_passToFunctionAsArguments packagesToRemove _heroku_buildpack_compile_removeNoLongerUsedPackages_callback
+	heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies 'build'
 }
 
-core_dependency_requires '*' grep
+core_usesIn heroku/buildpack compile_functions
 heroku_buildpack_compile_installLinuxbrewBuildDependencies()
 {
-	heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew build dependencies"
-	
-	local packagesToInstall
-	local packagesToInstall_initialised
-	core_variable_array_initialise packagesToInstall
-	
-	if [ -s "$_heroku_buildpack_compile_dependenciesFileName" ]; then
-		local packageToInstall
-		while IFS= read -r packageToInstall
-		do
-			if [ -z "$packageToInstall" ]; then
-				continue
-			fi
-		
-			if core_variable_startsWith "$packageToInstall" '#'; then
-				continue
-			fi
-		
-			# Is package already installed?
-			local package="$(core_compatibility_basename "$packageToInstall")"
-			if brew list -1 | grep -q '^'"$package"'$'; then
-				continue
-			fi
-		
-			core_variable_array_appendUniquely packagesToInstall "$packageToInstall"
-		done <"$_heroku_buildpack_compile_dependenciesFileName"
-	
-		core_variable_unset core_dependency_check_forcePackageManagerUpgradeDuringInstall
-		core_variable_array_passToFunctionAsArguments packagesToInstall core_dependency_check_Homebrew_packageManager
-	fi
-}
-
-heroku_buildpack_compile_makePackageManagerLinuxbrew()
-{
-	core_dependency_packageManager=Homebrew
+	heroku_buildpack_compile_linuxbrew_installDependencies 'build'
 }
 
 core_dependency_requires '*' rm ln
@@ -258,6 +142,24 @@ heroku_buildpack_compile_installProfileDScripts()
 	rsync --quiet -a "$runProfileDScripts"/ "$destinationProfileDFolderPath"/
 }
 
+core_usesIn heroku/buildpack compile_functions
+heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForRunDependencies()
+{
+	heroku_buildpack_compile_linuxbrew_installOrUpdate 'run'
+}
+
+core_usesIn heroku/buildpack compile_functions
+heroku_buildpack_compile_removeNoLongerUsedLinuxbrewRunDependencies()
+{
+	heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies 'run'
+}
+
+core_usesIn heroku/buildpack compile_functions
+heroku_buildpack_compile_installLinuxbrewRunDependencies()
+{
+	heroku_buildpack_compile_linuxbrew_installDependencies 'run'
+}
+
 core_dependency_requires '*' rsync
 heroku_buildpack_compile_installRunRootOntoPath()
 {
@@ -275,6 +177,17 @@ heroku_buildpack_compile_installRunRootOntoPath()
 	local rootFolderPath="$(heroku_runpack_getHome)"/.root
 	
 	rsync --quiet -a "$runRootFolderPath"/ "$rootFolderPath"/
+}
+
+core_usesIn heroku/buildpack compile_functions
+heroku_buildpack_compile_makePackageManagerLinuxbrew()
+{
+	local action='build'
+	local linuxbrewParentFolderPath
+	heroku_buildpack_compile_linuxbrew_setPaths
+	heroku_buildpack_compile_linuxbrew_setExportedPaths
+	
+	core_dependency_packageManager=Homebrew
 }
 
 heroku_buildpack_compile_sourceCompileExtensions()

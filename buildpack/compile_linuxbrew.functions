@@ -1,0 +1,180 @@
+# This file is part of shellfire heroku. It is subject to the licence terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/shellfire-dev/heroku/master/COPYRIGHT. No part of shellfire heroku, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2015 The developers of shellfire heroku. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/shellfire-dev/heroku/master/COPYRIGHT.
+
+
+core_dependency_requires '*' git
+heroku_buildpack_compile_linuxbrew_installOrUpdate()
+{
+	local action="$1"
+	
+	local linuxbrewParentFolderPath
+	heroku_buildpack_compile_linuxbrew_setPaths
+	
+	# TODO: Use a symlink / rsync when doing a 'run' action so will persist the cache
+	
+	local linuxbrewFolderPath="$linuxbrewParentFolderPath"/.linuxbrew
+	
+	if core_path_isReadableAndSearchableAndWritableFolderPath "$linuxbrewFolderPath"/.git; then
+		heroku_buildpack_compile_actionMessageAndNotes "Updating linuxbrew in cache (for $action dependencies); may take some time"
+		"$linuxbrewFolderPath"/bin/brew update
+		return 0
+	else
+		heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew in cache (for $action dependencies)"
+		git clone --quiet "$heroku_linuxbrewRepositoryUrl" "$linuxbrewFolderPath"
+	fi
+}
+
+core_dependency_requires '*' sort comm cat xargs
+heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies()
+{
+	local action="$1"
+	
+	heroku_buildpack_compile_actionMessageAndNotes "Removing no longer used $action linuxbrew dependencies" "Installing brew-rmtree if missing"
+
+	local linuxbrewParentFolderPath
+	heroku_buildpack_compile_linuxbrew_setPaths
+	(
+		heroku_buildpack_compile_linuxbrew_setExportedPaths
+		
+		brew tap beeftornado/rmtree 1>/dev/null 2>/dev/null
+		brew install beeftornado/rmtree/brew-rmtree 1>/dev/null 2>/dev/null
+		dependenciesFilePath="$heroku_compile_configurationFolderPath"/"$action".linuxbrew
+
+		local TMP_FILE
+	
+		core_temporaryFiles_newFileToRemoveOnExit
+		local sortedUniquePackagesWithoutTapsToInstallFilePath="$TMP_FILE"
+	
+		core_temporaryFiles_newFileToRemoveOnExit
+		local sortedUniquePackagesWithoutTapsToRemoveFilePath="$TMP_FILE"
+	
+		core_temporaryFiles_newFileToRemoveOnExit
+		local sortedUniquePackagesWithoutTapsToIgnoreFilePath="$TMP_FILE"
+	
+		{
+			# Ensure rmtree is in the install list!
+			printf '%s\n' 'brew-rmtree'
+		
+			if [ -s "$_heroku_buildpack_compile_dependenciesFilePath" ]; then
+				local packageToInstall
+				while IFS= read -r packageToInstall
+				do
+					if heroku_buildpack_compile_linuxbrew_ignorePackage; then
+						continue
+					fi
+					
+					local package="$(core_compatibility_basename "$packageToInstall")"
+					printf '%s' "$package"
+				done <"$dependenciesFilePath"
+			fi
+		} | sort -u >"$sortedUniquePackagesWithoutTapsToInstallFilePath"
+	
+		brew list -1 | comm -23 - "$sortedUniquePackagesWithoutTapsToInstallFilePath" >"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
+	
+		local packagesToRemove
+		local packagesToRemove_initialised
+		core_variable_array_initialise packagesToRemove
+	
+		local packageToRemove
+		while IFS= read -r packageToRemove
+		do
+			core_variable_array_append packagesToRemove "$packageToRemove"
+		done <"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
+	
+		# do not try to ignore things not installed
+		brew list -1 | comm -12 - "$sortedUniquePackagesWithoutTapsToRemoveFilePath" >"$sortedUniquePackagesWithoutTapsToIgnoreFilePath"
+	
+		_heroku_buildpack_compile_removeNoLongerUsedPackages_callback()
+		{
+			if [ $# -eq 0 ]; then
+				return 0
+			fi
+		
+			heroku_buildpack_compile_notesMessages "Removing unused linuxbrew build dependencies"
+			if [ -s "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" ]; then
+				cat "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" | xargs brew rmtree "$@" --ignore
+			else
+				brew rmtree "$@"
+			fi
+		}
+	
+		core_variable_array_passToFunctionAsArguments packagesToRemove _heroku_buildpack_compile_removeNoLongerUsedPackages_callback
+	)
+}
+
+heroku_buildpack_compile_linuxbrew_ignorePackage()
+{
+	if [ -z "$packageToInstall" ]; then
+		return 0
+	fi
+
+	if core_variable_startsWith "$packageToInstall" '#'; then
+		return 0
+	fi
+	
+	return 1	
+}
+
+heroku_buildpack_compile_linuxbrew_setPaths()
+{
+	case "$action" in
+		
+		build)
+			linuxbrewParentFolderPath="$heroku_buildpack_ourPrivateCacheDir"
+		;;
+		
+		run)
+			linuxbrewParentFolderPath="$(heroku_buildpack_getHome)"
+		;;
+		
+	esac
+}
+
+heroku_buildpack_compile_linuxbrew_setExportedPaths()
+{
+	heroku_buildpack_setLinuxbrewPathVariable PATH bin "$linuxbrewParentFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable MANPATH share/man "$linuxbrewParentFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable INFOPATH share/info "$linuxbrewParentFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable LD_LIBRARY_PATH lib "$linuxbrewParentFolderPath"
+}
+
+heroku_buildpack_compile_linuxbrew_installDependencies()
+{
+	local action="$1"
+	
+	heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew $action dependencies"
+	
+	local packagesToInstall
+	local packagesToInstall_initialised
+	core_variable_array_initialise packagesToInstall
+	
+	local dependenciesFilePath="$heroku_compile_configurationFolderPath"/"$action".linuxbrew
+	if [ ! -s "$dependenciesFilePath" ]; then
+		return 0
+	fi
+
+	local linuxbrewParentFolderPath
+	heroku_buildpack_compile_linuxbrew_setPaths
+	(
+		heroku_buildpack_compile_linuxbrew_setExportedPaths
+		
+		local packageToInstall
+		while IFS= read -r packageToInstall
+		do
+			if heroku_buildpack_compile_linuxbrew_ignorePackage; then
+				continue
+			fi
+	
+			# Is package already installed?
+			local package="$(core_compatibility_basename "$packageToInstall")"
+			if brew list -1 | grep -q '^'"$package"'$'; then
+				continue
+			fi
+	
+			core_variable_array_appendUniquely packagesToInstall "$packageToInstall"
+		done <"$dependenciesFilePath"
+	
+		core_variable_unset core_dependency_check_forcePackageManagerUpgradeDuringInstall
+		core_variable_array_passToFunctionAsArguments packagesToInstall core_dependency_check_Homebrew_packageManager
+	)
+}
