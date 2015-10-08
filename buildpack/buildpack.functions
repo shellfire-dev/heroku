@@ -27,6 +27,7 @@ heroku_buildpack_sourceFrameworkName()
 	fi
 	heroku_buildpack_frameworkName="$(<"$frameworkNameFilePath")"
 	ls -la "$frameworkNameFilePath"
+	cat  "$frameworkNameFilePath"
 	echo XXXX $heroku_buildpack_frameworkName XXXX
 }
 
