@@ -104,10 +104,8 @@ core_dependency_requires '*' sort comm cat xargs
 heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Removing no longer used linuxbrew dependencies" "Installing brew-rmtree if missing"
-	which brew
-	brew tap beeftornado/rmtree
-	brew install beeftornado/rmtree/brew-rmtree
-echo HELLO
+	brew tap beeftornado/rmtree 1>/dev/null 2>/dev/null
+	brew install beeftornado/rmtree/brew-rmtree 1>/dev/null 2>/dev/null
 	_heroku_buildpack_compile_dependenciesFileName="$heroku_compile_configurationFolderPath"/"$heroku_linuxbrewBuildDependenciesFileName"
 
 	local TMP_FILE
@@ -120,7 +118,7 @@ echo HELLO
 	
 	core_temporaryFiles_newFileToRemoveOnExit
 	local sortedUniquePackagesWithoutTapsToIgnoreFilePath="$TMP_FILE"
-
+set -x
 	{
 		local packageToInstall
 		while IFS= read -r packageToInstall
@@ -136,7 +134,7 @@ echo HELLO
 			# Is package already installed?
 			local package="$(core_compatibility_basename "$packageToInstall")"
 			printf '%s' "$package"
-		done <"$dependenciesFileName"
+		done <"$_heroku_buildpack_compile_dependenciesFileName"
 	} | sort -u >"$sortedUniquePackagesWithoutTapsToInstallFilePath"
 	
 	brew list -1 | comm -23 - "$sortedUniquePackagesWithoutTapsToInstallFilePath" >"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
