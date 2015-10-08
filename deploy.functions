@@ -108,9 +108,9 @@ heroku_deploy_setPreboot()
 	else
 		action=disable
 	fi
-
+	
 	# Parsing the command line output of heroku features is just TOO painful, so we deliberately invoke errors
-	heroku_toolbelt_inRepository false false features:"$action" preboot
+	heroku_toolbelt_inRepository false false features:"$action" preboot 2>/dev/null
 }
 
 core_dependency_requires '*' sort comm
@@ -177,14 +177,14 @@ heroku_deploy_setDomains()
 	local domainName
 	
 	# Domain names are case insensitive, hence -i
-	comm -23i "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToDeleteFilePath"
+	comm -23 "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToDeleteFilePath"
 	
 	while IFS="$(printf '\t')" read -r domainName
 	do
 		heroku_toolbelt_inRepository true true domains:remove "$domainName"
 	done
 
-	comm -13i "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToAddFilePath"
+	comm -13 "$sortedUniqueExistingDomainsFilePath" "$sortedUniqueNewDomainsFilePath" >"$domainsToAddFilePath"
 	
 	while IFS="$(printf '\t')" read -r domainName
 	do
