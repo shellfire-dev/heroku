@@ -101,8 +101,11 @@ heroku_buildpack_compile_installLinuxbrewBuildDependencies()
 core_dependency_requires '*' rm ln
 heroku_buildpack_compile_installBuildRootOntoPath()
 {
+	heroku_buildpack_compile_actionMessageAndNotes "Installing build root"
+	
 	local buildRootFolderPath="$heroku_compile_configurationFolderPath"/"$heroku_rootBuildDependenciesFileName"
 	if ! core_path_isReadableAndSearchableFolderPath "$buildRootFolderPath"; then
+		heroku_buildpack_compile_notesMessages "There is no build.root at '$buildRootFolderPath'"
 		return 0
 	fi
 	
@@ -110,36 +113,8 @@ heroku_buildpack_compile_installBuildRootOntoPath()
 	rm -rf "$rootFolderPath"
 	ln -s "$buildRootFolderPath" "$rootFolderPath"
 	
-	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/bin; then
-		heroku_buildpack_setRootPathVariable PATH bin "$rootFolderPath"/bin
-	fi
-	
-	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/man; then
-		heroku_buildpack_setRootPathVariable MANPATH man "$rootFolderPath"/man
-	fi
-
-	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/info; then
-		heroku_buildpack_setRootPathVariable INFOPATH info "$rootFolderPath"/info
-	fi
-
-	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/lib; then
-		heroku_buildpack_setRootPathVariable LD_LIBRARY_PATH lib "$rootFolderPath"/lib
-	fi
-}
-
-core_dependency_requires '*' mkdir rsync
-heroku_buildpack_compile_installProfileDScripts()
-{
-	local destinationProfileDFolderPath="$heroku_buildpack_buildDir"/.profile.d
-	mkdir -m 0755 -p "$destinationProfileDFolderPath"
-	
-	local runProfileDScripts="$heroku_compile_configurationFolderPath"/"$heroku_rootRunProfileDFolderName"
-	
-	if ! core_path_isReadableAndSearchableFolderPath "$runProfileDScripts"; then
-		return 0
-	fi
-	
-	rsync --quiet -a "$runProfileDScripts"/ "$destinationProfileDFolderPath"/
+	ls -la "$buildRootFolderPath"
+	ls -la "$rootFolderPath"
 }
 
 core_usesIn heroku/buildpack compile_linuxbrew
@@ -163,20 +138,45 @@ heroku_buildpack_compile_installLinuxbrewRunDependencies()
 core_dependency_requires '*' rsync
 heroku_buildpack_compile_installRunRootOntoPath()
 {
+	heroku_buildpack_compile_actionMessageAndNotes "Installing run root"
+	
+	local rootFolderPath="$(heroku_buildpack_getHome)"/.root
+	echo XXXXX "$rootFolderPath" XXXXX
+	mkdir -m 0755 -p "$rootFolderPath"
+	pushd "$rootFolderPath"
+		mkdir -m 0755 bin info man lib
+	popd
+	
 	local runRootFolderPath="$heroku_compile_configurationFolderPath"/"$heroku_rootBuildDependenciesFileName"
 	if ! core_path_isReadableAndSearchableFolderPath "$runRootFolderPath"; then
-
-		mkdir -m 0755 -p "$destinationProfileDFolderPath"
-		pushd "$destinationProfileDFolderPath"
-			mkdir -m 0755 bin info man lib
-		popd
-		
+		heroku_buildpack_compile_notesMessages "There is no run.root at '$runRootFolderPath'"
 		return 0
 	fi
 	
-	local rootFolderPath="$(heroku_buildpack_getHome)"/.root
-	
 	rsync --quiet -a "$runRootFolderPath"/ "$rootFolderPath"/
+	
+	ls -la "$runRootFolderPath"
+	ls -la "$rootFolderPath"
+}
+
+core_snippet_embed raw validate_deb_section run-profile-d
+core_dependency_requires '*' mkdir rsync
+heroku_buildpack_compile_installProfileDScripts()
+{
+	local destinationProfileDFolderPath="$heroku_buildpack_buildDir"/.profile.d
+	mkdir -m 0755 -p "$destinationProfileDFolderPath"
+	
+	
+	core_snippet_retrieve 'run-profile-d' no "$destinationProfileDFolderPath"/"$heroku_frameworkName".sh
+	
+	
+	local runProfileDScripts="$heroku_compile_configurationFolderPath"/"$heroku_rootRunProfileDFolderName"
+	
+	if ! core_path_isReadableAndSearchableFolderPath "$runProfileDScripts"; then
+		return 0
+	fi
+	
+	rsync --quiet -a "$runProfileDScripts"/ "$destinationProfileDFolderPath"/
 }
 
 core_usesIn heroku/buildpack compile_linuxbrew
@@ -187,7 +187,27 @@ heroku_buildpack_compile_makePackageManagerLinuxbrew()
 	heroku_buildpack_compile_linuxbrew_setPaths
 	heroku_buildpack_compile_linuxbrew_setExportedPaths
 	
+	
 	core_dependency_packageManager=Homebrew
+	
+	
+	local rootFolderPath="$heroku_buildpack_ourPrivateCacheDir"/.root
+	
+	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/bin; then
+		heroku_buildpack_setRootPathVariable PATH bin "$rootFolderPath"/bin
+	fi
+	
+	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/man; then
+		heroku_buildpack_setRootPathVariable MANPATH man "$rootFolderPath"/man
+	fi
+
+	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/info; then
+		heroku_buildpack_setRootPathVariable INFOPATH info "$rootFolderPath"/info
+	fi
+
+	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/lib; then
+		heroku_buildpack_setRootPathVariable LD_LIBRARY_PATH lib "$rootFolderPath"/lib
+	fi
 }
 
 heroku_buildpack_compile_sourceCompileExtensions()
