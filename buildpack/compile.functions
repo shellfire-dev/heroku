@@ -312,7 +312,7 @@ heroku_buildpack_compile_delegateToOtherBuildpacks()
 	
 	set -x
 	set +e
-	"$heroku_buildpack_buildDir"/.heroku.rc.d/buildpacks/heroku-skeleton-buildpack/bin/release "$heroku_buildpack_buildDir"
+	"$heroku_buildpack_buildDir"/.heroku.rc.d/buildpacks/heroku-buildpack-skeleton/bin/release "$heroku_buildpack_buildDir"
 	local exitCode=$?
 	set -e
 	
