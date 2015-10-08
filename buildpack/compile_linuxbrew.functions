@@ -82,7 +82,7 @@ heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies()
 		done <"$sortedUniquePackagesWithoutTapsToRemoveFilePath"
 	
 		# do not try to ignore things not installed
-		brew leaves -1 | comm -12 - "$sortedUniquePackagesWithoutTapsToRemoveFilePath" >"$sortedUniquePackagesWithoutTapsToIgnoreFilePath"
+		brew leaves -1 | | sort | comm -12 - "$sortedUniquePackagesWithoutTapsToRemoveFilePath" >"$sortedUniquePackagesWithoutTapsToIgnoreFilePath"
 	
 		_heroku_buildpack_compile_removeNoLongerUsedPackages_callback()
 		{
@@ -138,6 +138,7 @@ heroku_buildpack_compile_linuxbrew_setExportedPaths()
 	heroku_buildpack_setLinuxbrewPathVariable LD_LIBRARY_PATH lib "$linuxbrewParentFolderPath"
 }
 
+core_dependency_requires '*' sort grep
 heroku_buildpack_compile_linuxbrew_installDependencies()
 {
 	local action="$1"
@@ -167,7 +168,7 @@ heroku_buildpack_compile_linuxbrew_installDependencies()
 	
 			# Is package already installed?
 			local package="$(core_compatibility_basename "$packageToInstall")"
-			if brew leaves -1 | grep -q '^'"$package"'$'; then
+			if brew leaves -1 | sort | grep -q '^'"$package"'$'; then
 				continue
 			fi
 	
