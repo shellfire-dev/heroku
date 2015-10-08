@@ -47,7 +47,6 @@ heroku_buildpack_detect_delegateToOtherBuildpacks()
 	
 		local frameworkNameFilePath
 		heroku_buildpack_frameworkNameFilePath
-	
 		
 		set +e
 		"$detectFilePath" "$heroku_buildpack_buildDir" >"$frameworkNameFilePath"
@@ -55,30 +54,18 @@ heroku_buildpack_detect_delegateToOtherBuildpacks()
 		set -e
 		
 		if [ $exitCode -ne 0 ]; then
-		echo "E1:$exitCode:$detectFilePath:$frameworkNameFilePath"
-		exit 0
-		
 			rm "$frameworkNameFilePath"
 			exit $exitCode
 		fi
 		
 		if [ ! -s "$frameworkNameFilePath" ]; then
-		echo E2
-		exit 0
-		
-			exit $exitCode
 			rm "$frameworkNameFilePath"
+			exit $exitCode
 		fi
 		
 		if [ -z "$_heroku_buildpack_detect_frameworks" ]; then
-		echo E3
-		exit 0
-		
 			_heroku_buildpack_detect_frameworks="$(<"$frameworkNameFilePath")"
 		else
-		echo E4
-		exit 0
-		
 			_heroku_buildpack_detect_frameworks=" $(<"$frameworkNameFilePath")"
 		fi
 	}
