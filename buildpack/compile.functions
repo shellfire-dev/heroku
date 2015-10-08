@@ -310,7 +310,6 @@ heroku_buildpack_compile_delegateToOtherBuildpacks()
 	
 	heroku_buildpack_iterateOverBuildpacksToDelegateTo _heroku_buildpack_compile_delegateToOtherBuildpacks_callback
 	
-	set -x
 	set +e
 	"$heroku_buildpack_buildDir"/.heroku.rc.d/buildpacks/heroku-buildpack-skeleton/bin/release "$heroku_buildpack_buildDir"
 	local exitCode=$?
