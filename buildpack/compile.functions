@@ -210,6 +210,35 @@ heroku_buildpack_compile_makePackageManagerLinuxbrew()
 	core_dependency_packageManager=Homebrew
 }
 
+core_dependency_requires '*' rm ln
+heroku_buildpack_compile_installBuildRootOntoPath()
+{
+	local buildRootFolderPath="$heroku_compile_configurationFolderPath"/"$heroku_rootBuildDependenciesFileName"
+	if ! core_path_isReadableAndSearchableFolderPath "$buildRootFolderPath"; then
+		return 0
+	fi
+	
+	local rootFolderPath="$heroku_buildpack_ourPrivateCacheDir"/.root
+	rm -rf "$rootFolderPath"
+	ln -s "$buildRootFolderPath" "$rootFolderPath"
+	
+	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/bin; then
+		heroku_buildpack_setRootPathVariable PATH bin "$rootFolderPath"/bin
+	fi
+	
+	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/man; then
+		heroku_buildpack_setRootPathVariable MANPATH man "$rootFolderPath"/man
+	fi
+
+	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/info; then
+		heroku_buildpack_setRootPathVariable INFOPATH info "$rootFolderPath"/info
+	fi
+
+	if ! core_path_isReadableAndSearchableFolderPath "$rootFolderPath"/lib; then
+		heroku_buildpack_setRootPathVariable LD_LIBRARY_PATH lib "$rootFolderPath"/lib
+	fi
+}
+
 heroku_buildpack_compile_sourceCompileExtensions()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Sourcing Compile extensions"

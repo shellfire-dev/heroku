@@ -23,6 +23,12 @@ core_dependency_declares heroku_linuxbrewBuildDependenciesFileName
 heroku_linuxbrewRunDependenciesFileName='run.linuxbrew'
 core_dependency_declares heroku_linuxbrewRunDependenciesFileName
 
+heroku_rootBuildDependenciesFileName='build.root'
+core_dependency_declares heroku_linuxbrewBuildDependenciesFileName
+
+heroku_rootRunDependenciesFileName='run.root'
+core_dependency_declares heroku_linuxbrewRunDependenciesFileName
+
 heroku_frameworkNameFileName='.framework-name'
 core_dependency_declares heroku_frameworkNameFileName
 

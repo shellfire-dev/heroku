@@ -106,20 +106,39 @@ heroku_buildpack_iterateOverBuildpacksToDelegateTo()
 	popd
 }
 
+heroku_buildpack_setPathVariable()
+{
+	local variable="$1"
+	local folder="$2"
+	local rootFolderPath="$3"
+	local dotFolder="$4"
+	
+	local path="$rootFolderPath"/"$dotFolder"/"$folder"
+
+	if core_variable_isSet "$variable"; then
+		local core_variable_indirectValue_result
+		core_variable_indirectValue "$variable"
+	
+		core_variable_setVariable "$variable" "$path":"$core_variable_indirectValue_result"
+	else
+		core_variable_setVariable "$variable" "$path"
+	fi
+}
+
 heroku_buildpack_setLinuxbrewPathVariable()
 {
 	local variable="$1"
 	local folder="$2"
 	local rootFolderPath="$3"
 	
-	local linuxbrewPath="$rootFolderPath"/.linuxbrew/"$folder"
+	heroku_buildpack_setPathVariable "$variable" "$folder" "$rootFolderPath" '.linuxbrew'
+}
 
-	if core_variable_isSet "$variable"; then
-		local core_variable_indirectValue_result
-		core_variable_indirectValue "$variable"
+heroku_buildpack_setRootPathVariable()
+{
+	local variable="$1"
+	local folder="$2"
+	local rootFolderPath="$3"
 	
-		core_variable_setVariable "$variable" "$linuxbrewPath":"$core_variable_indirectValue_result"
-	else
-		core_variable_setVariable "$variable" "$linuxbrewPath"
-	fi
+	heroku_buildpack_setPathVariable "$variable" "$folder" "$rootFolderPath" '.root'
 }
