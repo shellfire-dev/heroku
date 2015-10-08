@@ -164,17 +164,17 @@ heroku_buildpack_compile_delegateToOtherBuildpacks()
 			chmod +x "$compileFilePath"
 		fi
 
-		heroku_buildpack_compile_notesMessages "Compiling buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName'"
+		heroku_buildpack_compile_notesMessages "Running 'compile' for buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName'"
 		set +e
 		"$compileFilePath" "$heroku_buildpack_buildDir" "$heroku_buildpack_cacheDir" "$heroku_buildpack_envDir"
 		local exitCode=$?
 		set -e
 		
 		if [ $exitCode -ne 0 ]; then
-			heroku_buildpack_compile_notesMessages "Compiling buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName' failed with exit code '$exitCode'"
+			heroku_buildpack_compile_notesMessages "Run of 'compile' for buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName' failed with exit code '$exitCode'"
 			exit $core_commandLine_exitCode_FAILURE
 		fi
-		heroku_buildpack_compile_notesMessages "Compiled buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName'"
+		heroku_buildpack_compile_notesMessages "Running 'compile' for buildpack '$buildpackFolderName' for framework '$heroku_buildpack_frameworkName' succeeded"
 		
 		heroku_buildpack_sourceEnvironment true
 	}

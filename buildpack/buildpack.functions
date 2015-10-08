@@ -26,6 +26,7 @@ heroku_buildpack_sourceFrameworkName()
 		exit $core_commandLine_exitCode_OSFILE
 	fi
 	heroku_buildpack_frameworkName="$(<"$frameworkNameFilePath")"
+	echo XXXX $heroku_buildpack_frameworkName XXXX
 }
 
 heroku_buildpack_sourceEnvironment()
