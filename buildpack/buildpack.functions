@@ -63,6 +63,9 @@ heroku_buildpack_iterateOverBuildpacksToDelegateTo()
 			fi
 			
 			# Detect ourselves
+			if [ "$buildpackFolderName" = "$heroku_moduleName" ]; then
+				continue
+			fi
 			if core_path_isReadableNonEmptyExecutableFilePath "$buildpackFolderName"/deploy; then
 				continue
 			fi
