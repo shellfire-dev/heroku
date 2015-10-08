@@ -166,7 +166,7 @@ heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 	core_variable_array_passToFunctionAsArguments packagesToRemove _heroku_buildpack_compile_removeNoLongerUsedPackages_callback
 }
 
-core_dependencies_requires '*' grep
+core_dependency_requires '*' grep
 heroku_buildpack_compile_installLinuxbrewBuildDependencies()
 {
 	local packagesToInstall
