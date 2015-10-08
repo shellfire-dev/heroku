@@ -80,19 +80,19 @@ heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
 	heroku_buildpack_compile_actionMessageAndNotes "Sourcing known configuration variables"
 }
 
-core_usesIn heroku/buildpack compile_functions
+core_usesIn heroku/buildpack compile_linuxbrew
 heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForBuildDependencies()
 {
 	heroku_buildpack_compile_linuxbrew_installOrUpdate 'build'
 }
 
-core_usesIn heroku/buildpack compile_functions
+core_usesIn heroku/buildpack compile_linuxbrew
 heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 {
 	heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies 'build'
 }
 
-core_usesIn heroku/buildpack compile_functions
+core_usesIn heroku/buildpack compile_linuxbrew
 heroku_buildpack_compile_installLinuxbrewBuildDependencies()
 {
 	heroku_buildpack_compile_linuxbrew_installDependencies 'build'
@@ -142,19 +142,19 @@ heroku_buildpack_compile_installProfileDScripts()
 	rsync --quiet -a "$runProfileDScripts"/ "$destinationProfileDFolderPath"/
 }
 
-core_usesIn heroku/buildpack compile_functions
+core_usesIn heroku/buildpack compile_linuxbrew
 heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForRunDependencies()
 {
 	heroku_buildpack_compile_linuxbrew_installOrUpdate 'run'
 }
 
-core_usesIn heroku/buildpack compile_functions
+core_usesIn heroku/buildpack compile_linuxbrew
 heroku_buildpack_compile_removeNoLongerUsedLinuxbrewRunDependencies()
 {
 	heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies 'run'
 }
 
-core_usesIn heroku/buildpack compile_functions
+core_usesIn heroku/buildpack compile_linuxbrew
 heroku_buildpack_compile_installLinuxbrewRunDependencies()
 {
 	heroku_buildpack_compile_linuxbrew_installDependencies 'run'
@@ -179,7 +179,7 @@ heroku_buildpack_compile_installRunRootOntoPath()
 	rsync --quiet -a "$runRootFolderPath"/ "$rootFolderPath"/
 }
 
-core_usesIn heroku/buildpack compile_functions
+core_usesIn heroku/buildpack compile_linuxbrew
 heroku_buildpack_compile_makePackageManagerLinuxbrew()
 {
 	local action='build'
