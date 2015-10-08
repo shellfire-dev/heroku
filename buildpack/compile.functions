@@ -104,7 +104,7 @@ heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForBuildDependencies()
 core_dependency_requires '*' sort comm cat xargs
 heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 {
-	heroku_buildpack_compile_actionMessageAndNotes "Removing no longer used linuxbrew dependencies"  "Installing brew-rmtree if missing"
+	heroku_buildpack_compile_actionMessageAndNotes "Removing no longer used linuxbrew dependencies" "Installing brew-rmtree if missing"
 	brew tap beeftornado/rmtree 1>/dev/null 2>/dev/null
 	brew install beeftornado/rmtree/brew-rmtree
 echo HELLO	
@@ -156,6 +156,7 @@ echo HELLO
 	
 	_heroku_buildpack_compile_removeNoLongerUsedPackages_callback()
 	{
+		heroku_buildpack_compile_notesMessages "Removing unused linuxbrew build dependencies"
 		if [ -s "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" ]; then
 			cat "$sortedUniquePackagesWithoutTapsToIgnoreFilePath" | xargs brew rmtree "$@" --ignore
 		else
@@ -169,6 +170,8 @@ echo HELLO
 core_dependency_requires '*' grep
 heroku_buildpack_compile_installLinuxbrewBuildDependencies()
 {
+	heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew build dependencies"
+	
 	local packagesToInstall
 	local packagesToInstall_initialised
 	core_variable_array_initialise
