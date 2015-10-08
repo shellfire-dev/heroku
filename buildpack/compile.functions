@@ -71,14 +71,6 @@ heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
 	heroku_buildpack_compile_actionMessageAndNotes "Sourcing known configuration variables"
 }
 
-core_dependency_requires '*' rsync
-heroku_buildpack_compile_deployHerokuBuildpackArtifacts()
-{
-	heroku_buildpack_compile_actionMessageAndNotes "Deploying Heroku Buildpack Artifacts to BUILD_DIR '$heroku_buildpack_buildDir'"
-	
-	rsync -a "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/"$heroku_buildpacksConfigurationFolderName"/ "$heroku_buildpack_buildDir"/
-}
-
 heroku_buildpack_compile_sourceCompileExtensions()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Sourcing Compile extensions"

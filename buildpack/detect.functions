@@ -25,6 +25,12 @@ heroku_buildpack_detect_us()
 	fi
 }
 
+core_dependency_requires '*' rsync
+heroku_buildpack_detect_deployHerokuBuildpackArtifacts()
+{
+	rsync -a "$heroku_buildpack_buildDir"/"$heroku_configurationFolderName"/"$heroku_buildpacksConfigurationFolderName"/ "$heroku_buildpack_buildDir"/ 1>/dev/null 2>/dev/null
+}
+
 core_dependency_requires '*' rm
 heroku_buildpack_detect_delegateToOtherBuildpacks()
 {
