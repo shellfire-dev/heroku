@@ -222,7 +222,7 @@ heroku_deploy_setEnvironmentVariables()
 	
 	pushd "$heroku_environmentVariablesConfigurationFolderPath"
 		
-		local environmentVariableFileName
+		local environmentVariableFile
 		set +f
 		for environmentVariableFile in *
 		do
@@ -241,7 +241,7 @@ heroku_deploy_setEnvironmentVariables()
 				
 			esac
 
-			core_variable_array_append environmentVariables "$environmentVariableFileName"="$(<"$environmentVariableFile")"
+			core_variable_array_append environmentVariables "$environmentVariableFile"="$(<"$environmentVariableFile")"
 			# We can unset any key, it needn't exist, but getting a list of keys without a silly message is hard
 			
 			
