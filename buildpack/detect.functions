@@ -55,7 +55,7 @@ heroku_buildpack_detect_delegateToOtherBuildpacks()
 		set -e
 		
 		if [ $exitCode -ne 0 ]; then
-		echo E1
+		echo "E1:$exitCode:$detectFilePath:$frameworkNameFilePath"
 		exit 0
 		
 			rm "$frameworkNameFilePath"
