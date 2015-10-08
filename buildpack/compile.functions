@@ -141,7 +141,6 @@ heroku_buildpack_compile_installRunRootOntoPath()
 	heroku_buildpack_compile_actionMessageAndNotes "Installing run root"
 	
 	local rootFolderPath="$(heroku_buildpack_getHome)"/.root
-	echo XXXXX "$rootFolderPath" XXXXX
 	mkdir -m 0755 -p "$rootFolderPath"
 	pushd "$rootFolderPath"
 		mkdir -m 0755 bin info man lib
@@ -155,8 +154,7 @@ heroku_buildpack_compile_installRunRootOntoPath()
 	
 	rsync --quiet -a "$runRootFolderPath"/ "$rootFolderPath"/
 	
-	ls -la "$runRootFolderPath"
-	ls -la "$rootFolderPath"
+	echo XXXX "$rootFolderPath" XXXX
 }
 
 core_snippet_embed raw run_profile_d
@@ -166,9 +164,9 @@ heroku_buildpack_compile_installProfileDScripts()
 	local destinationProfileDFolderPath="$heroku_buildpack_buildDir"/.profile.d
 	mkdir -m 0755 -p "$destinationProfileDFolderPath"
 	
-	
+	set -x
 	core_snippet_retrieve 'run_profile_d' no "$destinationProfileDFolderPath"/"$heroku_frameworkName".sh
-	
+	set +x
 	
 	local runProfileDScripts="$heroku_compile_configurationFolderPath"/"$heroku_rootRunProfileDFolderName"
 	
