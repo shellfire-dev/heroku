@@ -113,9 +113,6 @@ heroku_buildpack_compile_installBuildRootOntoPath()
 	local rootFolderPath="$heroku_buildpack_ourPrivateCacheDir"/.root
 	rm -rf "$rootFolderPath"
 	ln -s "$buildRootFolderPath" "$rootFolderPath"
-	
-	ls -la "$buildRootFolderPath"
-	ls -la "$rootFolderPath"
 }
 
 core_usesIn heroku/buildpack compile_linuxbrew
