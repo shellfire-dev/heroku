@@ -91,6 +91,7 @@ heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForBuildDependencies()
 		return 0
 	else
 		heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew in cache (for build dependencies)"
+		set -x
 		git clone --quiet "$heroku_linuxbrewRepositoryUrl" "$_heroku_buildpack_compile_linuxbrewFolderPath"
 	fi
 	
