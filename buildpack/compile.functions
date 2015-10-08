@@ -154,8 +154,6 @@ heroku_buildpack_compile_installRunRootOntoPath()
 	fi
 	
 	rsync --quiet -a "$runRootFolderPath"/ "$rootFolderPath"/
-	
-	echo XXXX "$rootFolderPath" XXXX
 }
 
 core_snippet_embed raw run_profile_d
