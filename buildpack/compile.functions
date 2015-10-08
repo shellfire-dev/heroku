@@ -125,6 +125,14 @@ heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
 		local packageToInstall
 		while IFS= read -r packageToInstall
 		do
+			if [ -z "$packageToInstall" ]; then
+				continue
+			fi
+			
+			if core_variable_startsWith "$packageToInstall" '#'; then
+				continue
+			fi
+			
 			# Is package already installed?
 			local package="$(core_compatibility_basename "$packageToInstall")"
 			printf '%s' "$package"
@@ -168,6 +176,14 @@ heroku_buildpack_compile_installLinuxbrewBuildDependencies()
 	local packageToInstall
 	while IFS= read -r packageToInstall
 	do
+		if [ -z "$packageToInstall" ]; then
+			continue
+		fi
+		
+		if core_variable_startsWith "$packageToInstall" '#'; then
+			continue
+		fi
+		
 		# Is package already installed?
 		local package="$(core_compatibility_basename "$packageToInstall")"
 		if brew list -1 | grep -q '^'"$package"'$'; then
