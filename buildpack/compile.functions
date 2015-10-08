@@ -140,7 +140,7 @@ heroku_buildpack_compile_installRunRootOntoPath()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Installing run root"
 	
-	local rootFolderPath="$(heroku_buildpack_getHome)"/.root
+	local rootFolderPath="$heroku_buildpack_buildDir"/.root
 	mkdir -m 0755 -p "$rootFolderPath"
 	pushd "$rootFolderPath"
 		mkdir -m 0755 bin info man lib

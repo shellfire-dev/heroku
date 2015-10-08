@@ -124,7 +124,7 @@ heroku_buildpack_compile_linuxbrew_setPaths()
 		;;
 		
 		run)
-			linuxbrewParentFolderPath="$(heroku_buildpack_getHome)"
+			linuxbrewParentFolderPath="$heroku_buildpack_buildDir"
 		;;
 		
 	esac
