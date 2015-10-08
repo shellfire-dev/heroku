@@ -37,22 +37,30 @@ heroku_buildpack_detect_delegateToOtherBuildpacks()
 {
 	_heroku_buildpack_release_delegateToOtherBuildpacks_callback()
 	{
+		echo A
 		local detectFilePath="$buildpackBinFolderPath"/detect
 		if ! core_path_isReadableNonEmptyFilePath "$detectFilePath"; then
 			return 0
 		fi
 		
+		echo B
 		if ! core_path_isReadableNonEmptyExecutableFilePath "$detectFilePath"; then
 			chmod +x "$detectFilePath"
 		fi
 	
+		echo C
 		local frameworkNameFilePath
 		heroku_buildpack_frameworkNameFilePath
 	
+		echo D
+		exit 0
+		
 		set +e
 		"$detectFilePath" >"$frameworkNameFilePath"
 		local exitCode=$?
 		set -e
+		
+		echo E
 		
 		if [ $exitCode -ne 0 ]; then
 			rm "$frameworkNameFilePath"
