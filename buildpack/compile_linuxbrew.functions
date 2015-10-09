@@ -202,7 +202,7 @@ core_dependency_requires '*' rm mkdir rsync
 heroku_buildpack_compile_linuxbrew_preserveInCache()
 {
 	local action="$1"
-		
+	
 	local linuxbrewCachedParentFolderPath
 	local linuxbrewActualParentFolderPath
 	heroku_buildpack_compile_linuxbrew_setPaths
@@ -229,6 +229,8 @@ heroku_buildpack_compile_linuxbrew_preserveInCache()
 core_dependency_requires '*' rm find xargs
 heroku_buildpack_compile_linuxbrew_strip()
 {
+	local action="$1"
+	
 	local linuxbrewCachedParentFolderPath
 	local linuxbrewActualParentFolderPath
 	heroku_buildpack_compile_linuxbrew_setPaths
