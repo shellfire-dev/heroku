@@ -3,24 +3,58 @@
 
 
 core_dependency_requires '*' git
+_heroku_buildpack_compile_linuxbrew_installOrUpdate_install()
+{
+	heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew (for $action dependencies)"
+	git clone --quiet "$heroku_linuxbrewRepositoryUrl" "$linuxbrewActualFolderPath"
+}
+
+_heroku_buildpack_compile_linuxbrew_installOrUpdate_update()
+{
+	heroku_buildpack_compile_actionMessageAndNotes "Updating linuxbrew (for $action dependencies); may take some time"
+	"$linuxbrewActualFolderPath"/bin/brew update
+}
+
+core_dependency_requires '*' rm mkdir rsync
 heroku_buildpack_compile_linuxbrew_installOrUpdate()
 {
 	local action="$1"
 	
-	local linuxbrewParentFolderPath
+	local linuxbrewCachedParentFolderPath
+	local linuxbrewActualParentFolderPath
 	heroku_buildpack_compile_linuxbrew_setPaths
+
+	local linuxbrewCachedFolderPath="$linuxbrewCachedParentFolderPath"/.linuxbrew
+	local linuxbrewActualFolderPath="$linuxbrewActualParentFolderPath"/.linuxbrew
 	
-	# TODO: Use a symlink / rsync when doing a 'run' action so will persist the cache
-	
-	local linuxbrewFolderPath="$linuxbrewParentFolderPath"/.linuxbrew
-	
-	if core_path_isReadableAndSearchableAndWritableFolderPath "$linuxbrewFolderPath"/.git; then
-		heroku_buildpack_compile_actionMessageAndNotes "Updating linuxbrew in cache (for $action dependencies); may take some time"
-		"$linuxbrewFolderPath"/bin/brew update
-		return 0
+	# eg build
+	if [ "$linuxbrewCachedParentFolderPath" = "$linuxbrewActualParentFolderPath" ]; then
+		
+		if ! core_path_isReadableAndSearchableAndWritableFolderPath "$linuxbrewCachedFolderPath"/.git; then
+			_heroku_buildpack_compile_linuxbrew_installOrUpdate_install
+		else
+			_heroku_buildpack_compile_linuxbrew_installOrUpdate_update
+		fi
+		
+	# eg run
 	else
-		heroku_buildpack_compile_actionMessageAndNotes "Installing linuxbrew in cache (for $action dependencies)"
-		git clone --quiet "$heroku_linuxbrewRepositoryUrl" "$linuxbrewFolderPath"
+		# Delete non-cached version
+		rm -rf "$linuxbrewActualFolderPath"
+		
+		local requiresUpdate=true
+		if ! core_path_isReadableAndSearchableAndWritableFolderPath "$linuxbrewCachedFolderPath"/.git; then
+			_heroku_buildpack_compile_linuxbrew_installOrUpdate_install
+			requiresUpdate=false
+		fi
+
+		# Restore cache
+		mkdir -m 0755 -p "$linuxbrewActualFolderPath"
+		rsync --quiet -a "$linuxbrewCachedParentFolderPath"/ "$linuxbrewActualFolderPath"/ 1>dev/null 2>/dev/null
+		
+		# Update (if req'd)
+		if $requiresUpdate; then
+			_heroku_buildpack_compile_linuxbrew_installOrUpdate_update
+		fi
 	fi
 }
 
@@ -30,18 +64,20 @@ heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies()
 	local action="$1"
 	
 	heroku_buildpack_compile_actionMessageAndNotes "Removing no longer used $action linuxbrew dependencies" "Installing brew-rmtree if missing"
-
-	local linuxbrewParentFolderPath
+	
+	local linuxbrewCachedParentFolderPath
+	local linuxbrewActualParentFolderPath
 	heroku_buildpack_compile_linuxbrew_setPaths
 	(
 		heroku_buildpack_compile_linuxbrew_setExportedPaths
 		
 		brew tap beeftornado/rmtree 1>/dev/null 2>/dev/null
+		brew tap-pin beeftornado/rmtree 1>/dev/null 2>/dev/null
 		brew install beeftornado/rmtree/brew-rmtree 1>/dev/null 2>/dev/null
 		dependenciesFilePath="$heroku_compile_configurationFolderPath"/"$action".linuxbrew
 
 		local TMP_FILE
-	
+		
 		core_temporaryFiles_newFileToRemoveOnExit
 		local sortedUniquePackagesWithoutTapsToInstallFilePath="$TMP_FILE"
 	
@@ -102,40 +138,26 @@ heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies()
 	)
 }
 
-heroku_buildpack_compile_linuxbrew_ignorePackage()
+heroku_buildpack_compile_linuxbrew_removeRmtree()
 {
-	if [ -z "$packageToInstall" ]; then
-		return 0
-	fi
-
-	if core_variable_startsWith "$packageToInstall" '#'; then
+	local action="$1"
+	
+	if [ "$action" != 'run' ]; then
 		return 0
 	fi
 	
-	return 1	
-}
-
-heroku_buildpack_compile_linuxbrew_setPaths()
-{
-	case "$action" in
+	heroku_buildpack_compile_actionMessageAndNotes "Removing brew-rmtree $action from linuxbrew"
+	
+	local linuxbrewCachedParentFolderPath
+	local linuxbrewActualParentFolderPath
+	heroku_buildpack_compile_linuxbrew_setPaths
+	(
+		heroku_buildpack_compile_linuxbrew_setExportedPaths
 		
-		build)
-			linuxbrewParentFolderPath="$heroku_buildpack_ourPrivateCacheDir"
-		;;
-		
-		run)
-			linuxbrewParentFolderPath="$heroku_buildpack_buildDir"
-		;;
-		
-	esac
-}
-
-heroku_buildpack_compile_linuxbrew_setExportedPaths()
-{
-	heroku_buildpack_setLinuxbrewPathVariable PATH bin "$linuxbrewParentFolderPath"
-	heroku_buildpack_setLinuxbrewPathVariable MANPATH share/man "$linuxbrewParentFolderPath"
-	heroku_buildpack_setLinuxbrewPathVariable INFOPATH share/info "$linuxbrewParentFolderPath"
-	heroku_buildpack_setLinuxbrewPathVariable LD_LIBRARY_PATH lib "$linuxbrewParentFolderPath"
+		brew tap-unpin beeftornado/rmtree 1>/dev/null 2>/dev/null
+		brew uninstall beeftornado/rmtree/brew-rmtree
+		brew untap beeftornado/rmtree
+	)
 }
 
 core_dependency_requires '*' sort grep
@@ -153,8 +175,9 @@ heroku_buildpack_compile_linuxbrew_installDependencies()
 	if [ ! -s "$dependenciesFilePath" ]; then
 		return 0
 	fi
-
-	local linuxbrewParentFolderPath
+	
+	local linuxbrewCachedParentFolderPath
+	local linuxbrewActualParentFolderPath
 	heroku_buildpack_compile_linuxbrew_setPaths
 	(
 		heroku_buildpack_compile_linuxbrew_setExportedPaths
@@ -178,4 +201,99 @@ heroku_buildpack_compile_linuxbrew_installDependencies()
 		core_variable_unset core_dependency_check_forcePackageManagerUpgradeDuringInstall
 		core_variable_array_passToFunctionAsArguments packagesToInstall core_dependency_check_Homebrew_packageManager
 	)
+}
+
+core_dependency_requires '*' rm mkdir rsync
+heroku_buildpack_compile_linuxbrew_preserveInCache()
+{
+	local action="$1"
+		
+	local linuxbrewCachedParentFolderPath
+	local linuxbrewActualParentFolderPath
+	heroku_buildpack_compile_linuxbrew_setPaths
+	
+	# eg build
+	if [ "$linuxbrewCachedParentFolderPath" = "$linuxbrewActualParentFolderPath" ]; then
+		return 0
+	fi
+
+	local linuxbrewCachedFolderPath="$linuxbrewCachedParentFolderPath"/.linuxbrew
+	local linuxbrewActualFolderPath="$linuxbrewActualParentFolderPath"/.linuxbrew
+
+	# Delete cached version
+	rm -rf "$linuxbrewCachedFolderPath"
+
+	# Preserve cache
+	mkdir -m 0755 -p "$linuxbrewCachedFolderPath"
+	rsync --quiet -a "$linuxbrewActualFolderPath"/ "$linuxbrewCachedParentFolderPath"/ 1>dev/null 2>/dev/null
+}
+
+core_dependency_requires '*' rm find xargs
+heroku_buildpack_compile_linuxbrew_strip()
+{
+	local linuxbrewCachedParentFolderPath
+	local linuxbrewActualParentFolderPath
+	heroku_buildpack_compile_linuxbrew_setPaths
+
+	local linuxbrewCachedFolderPath="$linuxbrewCachedParentFolderPath"/.linuxbrew
+	local linuxbrewActualFolderPath="$linuxbrewActualParentFolderPath"/.linuxbrew
+	
+	# eg build
+	if [ "$linuxbrewCachedParentFolderPath" = "$linuxbrewActualParentFolderPath" ]; then
+		return 0
+	fi
+	
+	pushd "$linuxbrewActualParentFolderPath"
+	
+		pushd Library
+			
+			# We keep LinkedKegs
+			rm -rf .rubocop.yml brew.rb Aliases Contributions ENV Formula Homebrew Taps
+			
+		popd
+		
+		rm -rf .git .gitignore .trave.yml .yardopts CODEOFCONDUCT.md CONTRIBUTING.md LICENSE.txt README.md SUPPORTERS.md
+
+		find ./Cellar -name 'INSTALL_RECEIPT.json' | xargs rm -rf
+		
+	popd
+}
+
+
+heroku_buildpack_compile_linuxbrew_ignorePackage()
+{
+	if [ -z "$packageToInstall" ]; then
+		return 0
+	fi
+
+	if core_variable_startsWith "$packageToInstall" '#'; then
+		return 0
+	fi
+	
+	return 1	
+}
+
+heroku_buildpack_compile_linuxbrew_setPaths()
+{
+	case "$action" in
+		
+		build)
+			linuxbrewCachedParentFolderPath="$heroku_buildpack_ourPrivateCacheDir"/"$action"
+			linuxbrewActualParentFolderPath="$linuxbrewActualParentFolderPath"
+		;;
+		
+		run)
+			linuxbrewCachedParentFolderPath="$heroku_buildpack_ourPrivateCacheDir"/"$action"
+			linuxbrewActualParentFolderPath="$heroku_buildpack_buildDir"
+		;;
+		
+	esac
+}
+
+heroku_buildpack_compile_linuxbrew_setExportedPaths()
+{
+	heroku_buildpack_setLinuxbrewPathVariable PATH bin "$linuxbrewActualParentFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable MANPATH share/man "$linuxbrewActualParentFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable INFOPATH share/info "$linuxbrewActualParentFolderPath"
+	heroku_buildpack_setLinuxbrewPathVariable LD_LIBRARY_PATH lib "$linuxbrewActualParentFolderPath"
 }

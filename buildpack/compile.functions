@@ -82,21 +82,14 @@ heroku_buildpack_compile_sourceKnownCompileConfigurationVariables()
 }
 
 core_usesIn heroku/buildpack compile_linuxbrew
-heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForBuildDependencies()
+heroku_buildpack_compile_linuxbrew()
 {
-	heroku_buildpack_compile_linuxbrew_installOrUpdate 'build'
-}
-
-core_usesIn heroku/buildpack compile_linuxbrew
-heroku_buildpack_compile_removeNoLongerUsedLinuxbrewBuildDependencies()
-{
-	heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies 'build'
-}
-
-core_usesIn heroku/buildpack compile_linuxbrew
-heroku_buildpack_compile_installLinuxbrewBuildDependencies()
-{
-	heroku_buildpack_compile_linuxbrew_installDependencies 'build'
+	local action="$1"
+	local functionName
+	for functionName in installOrUpdate removeNoLongerUsedDependencies removeRmtree installDependencies preserveInCache strip
+	do
+		heroku_buildpack_compile_${functionName} "$action"
+	done
 }
 
 core_dependency_requires '*' rm ln
@@ -115,25 +108,7 @@ heroku_buildpack_compile_installBuildRootOntoPath()
 	ln -s "$buildRootFolderPath" "$rootFolderPath"
 }
 
-core_usesIn heroku/buildpack compile_linuxbrew
-heroku_buildpack_compile_installOrUpdateLinuxbrewInCacheForRunDependencies()
-{
-	heroku_buildpack_compile_linuxbrew_installOrUpdate 'run'
-}
-
-core_usesIn heroku/buildpack compile_linuxbrew
-heroku_buildpack_compile_removeNoLongerUsedLinuxbrewRunDependencies()
-{
-	heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies 'run'
-}
-
-core_usesIn heroku/buildpack compile_linuxbrew
-heroku_buildpack_compile_installLinuxbrewRunDependencies()
-{
-	heroku_buildpack_compile_linuxbrew_installDependencies 'run'
-}
-
-core_dependency_requires '*' rsync
+core_dependency_requires '*' mkdir rsync
 heroku_buildpack_compile_installRunRootOntoPath()
 {
 	heroku_buildpack_compile_actionMessageAndNotes "Installing run root"
@@ -175,7 +150,9 @@ core_usesIn heroku/buildpack compile_linuxbrew
 heroku_buildpack_compile_makePackageManagerLinuxbrew()
 {
 	local action='build'
-	local linuxbrewParentFolderPath
+	
+	local linuxbrewCachedParentFolderPath
+	local linuxbrewActualParentFolderPath
 	heroku_buildpack_compile_linuxbrew_setPaths
 	heroku_buildpack_compile_linuxbrew_setExportedPaths
 	
