@@ -246,3 +246,27 @@ heroku_buildpack_compile_delegateToOtherBuildpacks()
 	
 	heroku_buildpack_iterateOverBuildpacksToDelegateTo _heroku_buildpack_compile_delegateToOtherBuildpacks_callback
 }
+
+core_dependency_requires '*' rm find xargs chattr
+heroku_buildpack_compile_clean()
+{
+	heroku_buildpack_compile_actionMessageAndNotes "Cleaning BUILD_DIR"
+	
+	pushd "$heroku_buildpack_buildDir"
+		
+		heroku_buildpack_compile_notesMessages "Making all files securely deletable using chattr +s"
+		find . -type f | xargs chattr +s 1>/dev/null 2>/dev/null || true
+		
+		heroku_buildpack_compile_notesMessages "Removing build artifacts"
+		rm -rf .heroku.rc.d COPYRIGHT LICENSE README.md deploy
+		
+	popd
+}
+
+core_dependency_requires '*' chmod
+heroku_buildpack_compile_makeReadOnly()
+{
+	heroku_buildpack_compile_actionMessageAndNotes "Making BUILD_DIR contents readonly (with the exception of a local tmp)"
+	
+	chmod -R ugo-w "$heroku_buildpack_buildDir"
+}

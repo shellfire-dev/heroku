@@ -246,6 +246,8 @@ heroku_buildpack_compile_linuxbrew_strip()
 	
 	pushd "$linuxbrewActualParentFolderPath"
 	
+		ls -la .
+		
 		pushd Library
 			
 			# We keep LinkedKegs
@@ -259,7 +261,6 @@ heroku_buildpack_compile_linuxbrew_strip()
 		
 	popd
 }
-
 
 heroku_buildpack_compile_linuxbrew_ignorePackage()
 {
