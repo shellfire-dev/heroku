@@ -191,16 +191,36 @@ heroku_buildpack_compile_sourceCompileExtensions()
 	
 	pushd "$extensionsFolderPath"
 		
-		local compileExtensionFile
+		local compileExtensionFolder
 		set +f
-		for compileExtensionFile in *.compile.sh
+		for compileExtensionFolder in *.compile.d
 		do
 			set -f
+			if core_path_isReadableAndSearchableFolderPath "$compileExtensionFolder"; then
 			
-			heroku_buildpack_compile_notesMessages "Sourcing compile extension '$compileExtensionFile'"
+				heroku_buildpack_compile_notesMessages "Sourcing compile extensions in '$compileExtensionFolder'"
+				
+				pushd "$compileExtensionFolder"
+				
+					set +f
+					local compileExtensionScript
+					for compileExtensionScript in *.compile.sh
+					do
+						set -f
+						if core_path_isReadableNonEmptyFilePath "$compileExtensionScript"; then
 			
-			# ./ required for source to work in some shells
-			. ./"$compileExtensionFile"
+							heroku_buildpack_compile_notesMessages "Sourcing compile extension script '$compileExtensionScript'"
+							
+							# ./ required for source to work in some shells
+							. ./"$compileExtensionScript"
+						fi
+					done
+					set -f
+				
+				popd
+				
+			fi
+			
 		done
 		set -f
 	
