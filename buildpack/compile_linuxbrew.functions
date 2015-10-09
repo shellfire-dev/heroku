@@ -30,31 +30,24 @@ heroku_buildpack_compile_linuxbrew_installOrUpdate()
 	# eg build
 	if [ "$linuxbrewCachedParentFolderPath" = "$linuxbrewActualParentFolderPath" ]; then
 		
-		if ! core_path_isReadableAndSearchableAndWritableFolderPath "$linuxbrewCachedFolderPath"/.git; then
-			_heroku_buildpack_compile_linuxbrew_installOrUpdate_install
-		else
+		if core_path_isReadableAndSearchableAndWritableFolderPath "$linuxbrewCachedFolderPath"/.git; then
 			_heroku_buildpack_compile_linuxbrew_installOrUpdate_update
+		else
+			_heroku_buildpack_compile_linuxbrew_installOrUpdate_install
 		fi
 		
 	# eg run
 	else
-		set -x
 		# Delete non-cached version
 		rm -rf "$linuxbrewActualFolderPath"
 		
-		local requiresUpdate=true
-		if ! core_path_isReadableAndSearchableAndWritableFolderPath "$linuxbrewCachedFolderPath"/.git; then
-			_heroku_buildpack_compile_linuxbrew_installOrUpdate_install
-			requiresUpdate=false
-		fi
-
-		# Restore cache
-		mkdir -m 0755 -p "$linuxbrewActualFolderPath"
-		rsync --quiet -a "$linuxbrewCachedParentFolderPath"/ "$linuxbrewActualFolderPath"/ 1>/dev/null 2>/dev/null
-		
-		# Update (if req'd)
-		if $requiresUpdate; then
+		if core_path_isReadableAndSearchableAndWritableFolderPath "$linuxbrewCachedFolderPath"/.git; then
+			mkdir -m 0755 -p "$linuxbrewActualFolderPath"
+			rsync --quiet -a "$linuxbrewCachedParentFolderPath"/ "$linuxbrewActualFolderPath"/ 1>/dev/null 2>/dev/null
+			
 			_heroku_buildpack_compile_linuxbrew_installOrUpdate_update
+		else
+			_heroku_buildpack_compile_linuxbrew_installOrUpdate_install
 		fi
 	fi
 }
