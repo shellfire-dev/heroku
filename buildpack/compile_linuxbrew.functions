@@ -49,7 +49,7 @@ heroku_buildpack_compile_linuxbrew_installOrUpdate()
 
 		# Restore cache
 		mkdir -m 0755 -p "$linuxbrewActualFolderPath"
-		rsync --quiet -a "$linuxbrewCachedParentFolderPath"/ "$linuxbrewActualFolderPath"/ 1>dev/null 2>/dev/null
+		rsync --quiet -a "$linuxbrewCachedParentFolderPath"/ "$linuxbrewActualFolderPath"/ 1>/dev/null 2>/dev/null
 		
 		# Update (if req'd)
 		if $requiresUpdate; then
@@ -225,7 +225,7 @@ heroku_buildpack_compile_linuxbrew_preserveInCache()
 
 	# Preserve cache
 	mkdir -m 0755 -p "$linuxbrewCachedFolderPath"
-	rsync --quiet -a "$linuxbrewActualFolderPath"/ "$linuxbrewCachedParentFolderPath"/ 1>dev/null 2>/dev/null
+	rsync --quiet -a "$linuxbrewActualFolderPath"/ "$linuxbrewCachedParentFolderPath"/ 1>/dev/null 2>/dev/null
 }
 
 core_dependency_requires '*' rm find xargs
