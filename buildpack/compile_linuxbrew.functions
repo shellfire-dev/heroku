@@ -66,7 +66,7 @@ heroku_buildpack_compile_linuxbrew_removeNoLongerUsedDependencies()
 		heroku_buildpack_compile_linuxbrew_setExportedPaths
 		
 		brew tap beeftornado/rmtree 1>/dev/null 2>/dev/null
-		brew tap-pin beeftornado/rmtree 1>/dev/null 2>/dev/null
+		brew tap-pin beeftornado/rmtree 1>/dev/null 2>/dev/null || true
 		brew install beeftornado/rmtree/brew-rmtree 1>/dev/null 2>/dev/null
 		dependenciesFilePath="$heroku_compile_configurationFolderPath"/"$action".linuxbrew
 
@@ -149,7 +149,7 @@ heroku_buildpack_compile_linuxbrew_removeRmtree()
 	(
 		heroku_buildpack_compile_linuxbrew_setExportedPaths
 		
-		brew tap-unpin beeftornado/rmtree 1>/dev/null 2>/dev/null
+		brew tap-unpin beeftornado/rmtree 1>/dev/null 2>/dev/null || true
 		brew uninstall beeftornado/rmtree/brew-rmtree
 		brew untap beeftornado/rmtree
 	)
