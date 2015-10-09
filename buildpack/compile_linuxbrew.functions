@@ -244,9 +244,7 @@ heroku_buildpack_compile_linuxbrew_strip()
 	
 	heroku_buildpack_compile_actionMessageAndNotes "Stripping linuxbrew $action"
 	
-	pushd "$linuxbrewActualParentFolderPath"
-	
-		ls -la .
+	pushd "$linuxbrewActualFolderPath"
 		
 		pushd Library
 			
@@ -255,7 +253,7 @@ heroku_buildpack_compile_linuxbrew_strip()
 			
 		popd
 		
-		rm -rf .git .gitignore .trave.yml .yardopts CODEOFCONDUCT.md CONTRIBUTING.md LICENSE.txt README.md SUPPORTERS.md
+		rm -rf .git .gitignore .travis.yml .yardopts CODEOFCONDUCT.md CONTRIBUTING.md LICENSE.txt README.md SUPPORTERS.md
 
 		find ./Cellar -name 'INSTALL_RECEIPT.json' | xargs rm -rf
 		
