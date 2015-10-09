@@ -279,7 +279,7 @@ heroku_buildpack_compile_linuxbrew_setPaths()
 		
 		build)
 			linuxbrewCachedParentFolderPath="$heroku_buildpack_ourPrivateCacheDir"/"$action"
-			linuxbrewActualParentFolderPath="$linuxbrewActualParentFolderPath"
+			linuxbrewActualParentFolderPath="$linuxbrewCachedParentFolderPath"
 		;;
 		
 		run)
