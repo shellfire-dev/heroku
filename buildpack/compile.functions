@@ -86,7 +86,7 @@ heroku_buildpack_compile_linuxbrew()
 {
 	local action="$1"
 	local functionName
-	for functionName in installOrUpdate removeNoLongerUsedDependencies removeRmtree installDependencies preserveInCache strip
+	for functionName in installOrUpdate removeNoLongerUsedDependencies removeRmtree installDependencies preserveInCache
 	do
 		heroku_buildpack_compile_linuxbrew_${functionName} "$action"
 	done
@@ -245,6 +245,11 @@ heroku_buildpack_compile_delegateToOtherBuildpacks()
 	}
 	
 	heroku_buildpack_iterateOverBuildpacksToDelegateTo _heroku_buildpack_compile_delegateToOtherBuildpacks_callback
+}
+
+heroku_buildpack_compile_stripRunLinuxbrew()
+{
+	heroku_buildpack_compile_linuxbrew_strip 'run'
 }
 
 core_dependency_requires '*' rm find xargs chattr
