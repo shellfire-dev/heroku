@@ -38,6 +38,7 @@ heroku_buildpack_compile_linuxbrew_installOrUpdate()
 		
 	# eg run
 	else
+		set -x
 		# Delete non-cached version
 		rm -rf "$linuxbrewActualFolderPath"
 		
@@ -143,6 +144,7 @@ heroku_buildpack_compile_linuxbrew_removeRmtree()
 	local action="$1"
 	
 	if [ "$action" != 'run' ]; then
+		heroku_buildpack_compile_actionMessageAndNotes "Not removing brew-rmtree $action from linuxbrew"
 		return 0
 	fi
 	
@@ -214,9 +216,12 @@ heroku_buildpack_compile_linuxbrew_preserveInCache()
 	
 	# eg build
 	if [ "$linuxbrewCachedParentFolderPath" = "$linuxbrewActualParentFolderPath" ]; then
+		heroku_buildpack_compile_actionMessageAndNotes "Not preserving linuxbrew $action in cache"
 		return 0
 	fi
-
+	
+	heroku_buildpack_compile_actionMessageAndNotes "Preserving linuxbrew $action in cache"
+	
 	local linuxbrewCachedFolderPath="$linuxbrewCachedParentFolderPath"/.linuxbrew
 	local linuxbrewActualFolderPath="$linuxbrewActualParentFolderPath"/.linuxbrew
 
@@ -240,8 +245,11 @@ heroku_buildpack_compile_linuxbrew_strip()
 	
 	# eg build
 	if [ "$linuxbrewCachedParentFolderPath" = "$linuxbrewActualParentFolderPath" ]; then
+		heroku_buildpack_compile_actionMessageAndNotes "Not stripping linuxbrew $action"
 		return 0
 	fi
+	
+	heroku_buildpack_compile_actionMessageAndNotes "Stripping linuxbrew $action"
 	
 	pushd "$linuxbrewActualParentFolderPath"
 	
