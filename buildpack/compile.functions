@@ -86,7 +86,7 @@ heroku_buildpack_compile_linuxbrew()
 {
 	local action="$1"
 	local functionName
-	for functionName in installOrUpdate removeNoLongerUsedDependencies removeRmtree installDependencies preserveInCache
+	for functionName in installOrUpdate removeNoLongerUsedDependencies removeRmtree installDependencies cleanup preserveInCache
 	do
 		heroku_buildpack_compile_linuxbrew_${functionName} "$action"
 	done

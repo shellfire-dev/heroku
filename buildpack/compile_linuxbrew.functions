@@ -198,6 +198,24 @@ heroku_buildpack_compile_linuxbrew_installDependencies()
 	)
 }
 
+heroku_buildpack_compile_linuxbrew_cleanup()
+{
+	local action="$1"
+	
+	local linuxbrewCachedParentFolderPath
+	local linuxbrewActualParentFolderPath
+	heroku_buildpack_compile_linuxbrew_setPaths
+
+	local linuxbrewCachedFolderPath="$linuxbrewCachedParentFolderPath"/.linuxbrew
+	local linuxbrewActualFolderPath="$linuxbrewActualParentFolderPath"/.linuxbrew
+
+	heroku_buildpack_compile_actionMessageAndNotes "Cleaning up linuxbrew $action"
+	(
+		heroku_buildpack_compile_linuxbrew_setExportedPaths
+		brew cleanup
+	)
+}
+
 core_dependency_requires '*' rm mkdir rsync
 heroku_buildpack_compile_linuxbrew_preserveInCache()
 {
@@ -237,7 +255,7 @@ heroku_buildpack_compile_linuxbrew_strip()
 
 	local linuxbrewCachedFolderPath="$linuxbrewCachedParentFolderPath"/.linuxbrew
 	local linuxbrewActualFolderPath="$linuxbrewActualParentFolderPath"/.linuxbrew
-	
+
 	# eg build
 	if [ "$linuxbrewCachedParentFolderPath" = "$linuxbrewActualParentFolderPath" ]; then
 		heroku_buildpack_compile_actionMessageAndNotes "Not stripping linuxbrew $action"
